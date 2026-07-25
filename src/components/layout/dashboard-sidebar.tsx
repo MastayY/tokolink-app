@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import { TokolinkLogo } from "@/components/brand/logo";
 import {
   LayoutDashboard,
@@ -16,15 +17,17 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { Tenant } from "@/lib/types";
+import { getPendingActionCount } from "@/server/order.functions";
 
 interface TabItem {
   to: string;
   label: string;
   icon: React.ComponentType<any>;
   exact?: boolean;
+  badge?: number;
 }
 
-const tabs: TabItem[] = [
+const BASE_TABS: Omit<TabItem, "badge">[] = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
   { to: "/dashboard/links", label: "Tautan", icon: Link2 },
   { to: "/dashboard/products", label: "Produk", icon: ShoppingBag },
@@ -55,6 +58,21 @@ export function DashboardSidebar({
   signOut,
   navigate,
 }: DashboardSidebarProps) {
+  // Poll for pending-action orders (PAID status) every 30s for the badge count
+  const { data: pendingData } = useQuery({
+    queryKey: ["pending-action-count"],
+    queryFn: () => getPendingActionCount(),
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  });
+
+  const pendingCount = pendingData?.count ?? 0;
+
+  const tabs: TabItem[] = BASE_TABS.map((t) => ({
+    ...t,
+    badge: t.to === "/dashboard/orders" && pendingCount > 0 ? pendingCount : undefined,
+  }));
+
   return (
     <div className="flex flex-col h-full">
       {/* Brand Header */}
@@ -102,11 +120,18 @@ export function DashboardSidebar({
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="shrink-0"
+                className="shrink-0 relative"
               >
                 <Icon
                   className={`h-5 w-5 ${active ? "text-accent" : "text-muted-foreground group-hover:text-foreground transition-colors"}`}
                 />
+                {/* Collapsed badge — small dot */}
+                {isCollapsed && !isMobile && t.badge && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-lime" />
+                  </span>
+                )}
               </motion.div>
 
               {(!isCollapsed || isMobile) && (
@@ -114,9 +139,20 @@ export function DashboardSidebar({
                   initial={{ opacity: 0, x: -4 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -4 }}
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap flex-1"
                 >
                   {t.label}
+                </motion.span>
+              )}
+
+              {/* Expanded badge — pill count */}
+              {(!isCollapsed || isMobile) && t.badge && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-lime text-background text-[10px] font-bold tabular-nums"
+                >
+                  {t.badge > 99 ? "99+" : t.badge}
                 </motion.span>
               )}
             </Link>

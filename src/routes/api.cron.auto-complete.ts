@@ -2,6 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { prisma } from "@/db";
 import { isValidCronSecret } from "@/lib/auth-utils";
+import { sendEmailSellerOrderCompleted } from "@/lib/notifications";
 
 const DAYS_BEFORE_AUTO_COMPLETE = 7;
 
@@ -23,7 +24,13 @@ export const Route = createFileRoute("/api/cron/auto-complete")({
           },
           include: {
             tenant: {
-              select: { bankCode: true, bankAccountNumber: true, bankAccountName: true },
+              select: {
+                name: true,
+                bankCode: true,
+                bankAccountNumber: true,
+                bankAccountName: true,
+                user: { select: { email: true } },
+              },
             },
           },
         });
@@ -64,6 +71,18 @@ export const Route = createFileRoute("/api/cron/auto-complete")({
                   ]
                 : []),
             ]);
+
+            // Notify seller that order was auto-completed (fire-and-forget)
+            if (tenant?.user?.email) {
+              void sendEmailSellerOrderCompleted({
+                sellerEmail: tenant.user.email,
+                sellerName: tenant.name,
+                orderCode: order.orderCode,
+                sellerPayout: order.sellerPayout,
+                autoCompleted: true,
+              });
+            }
+
             completed++;
           } catch (err) {
             console.error(`[cron/auto-complete] Failed for order ${order.id}:`, err);

@@ -3,6 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { prisma } from "@/db";
 import { executeIrisPayout } from "@/lib/midtrans";
 import { isValidCronSecret } from "@/lib/auth-utils";
+import {
+  sendEmailSellerPayoutSuccess,
+  notifySellerWhatsAppPayoutSuccess,
+  sendEmailSellerPayoutFailed,
+  alertAdminPayoutFailed,
+} from "@/lib/notifications";
 
 export const Route = createFileRoute("/api/cron/payouts")({
   server: {
@@ -124,16 +130,61 @@ export const Route = createFileRoute("/api/cron/payouts")({
                 paidAt: now,
               },
             });
+
+            // Opsi B: secondary lookup for seller contact info
+            const sellerInfo = await prisma.tenant.findUnique({
+              where: { id: payout.tenantId },
+              select: { name: true, whatsapp: true, user: { select: { email: true } } },
+            });
+            if (sellerInfo) {
+              void sendEmailSellerPayoutSuccess({
+                sellerEmail: sellerInfo.user?.email ?? "",
+                sellerName: sellerInfo.name,
+                orderCode: payout.orderId,
+                amount: payout.amount,
+                bankAccountNumber: payout.bankAccountNumber,
+              });
+              if (sellerInfo.whatsapp) {
+                void notifySellerWhatsAppPayoutSuccess({
+                  sellerPhone: sellerInfo.whatsapp,
+                  orderCode: payout.orderId,
+                  amount: payout.amount,
+                });
+              }
+            }
+
             paid++;
           } catch (err: any) {
             console.error(`[cron/payouts] Iris failed for payout ${payout.id}:`, err);
+            const failureReason = err.message ?? "Iris API error";
             await prisma.payout.update({
               where: { id: payout.id },
               data: {
                 status: "FAILED",
-                failureReason: err.message ?? "Iris API error",
+                failureReason,
               },
             });
+
+            // Opsi B: secondary lookup for seller contact info
+            const sellerInfoFail = await prisma.tenant.findUnique({
+              where: { id: payout.tenantId },
+              select: { name: true, user: { select: { email: true } } },
+            });
+            if (sellerInfoFail) {
+              void sendEmailSellerPayoutFailed({
+                sellerEmail: sellerInfoFail.user?.email ?? "",
+                sellerName: sellerInfoFail.name,
+                orderCode: payout.orderId,
+                amount: payout.amount,
+              });
+            }
+            void alertAdminPayoutFailed({
+              orderCode: payout.orderId,
+              tenantId: payout.tenantId,
+              amount: payout.amount,
+              failureReason,
+            });
+
             failed++;
           }
         }

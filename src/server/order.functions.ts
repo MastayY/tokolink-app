@@ -127,3 +127,14 @@ export const getOverviewData = createServerFn({ method: "GET" })
       chartData: monthsData,
     };
   });
+
+// Orders in PAID status are exactly the queue needing seller action (create shipment).
+// Used by the sidebar badge — cheap COUNT query, no pagination needed.
+export const getPendingActionCount = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const count = await prisma.order.count({
+      where: { tenantId: context.tenant!.id, status: "PAID" },
+    });
+    return { count };
+  });

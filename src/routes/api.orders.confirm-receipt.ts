@@ -2,6 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { prisma } from "@/db";
 import { orderLookupSchema } from "@/lib/schemas";
+import { sendEmailSellerOrderCompleted } from "@/lib/notifications";
 
 export const Route = createFileRoute("/api/orders/confirm-receipt")({
   server: {
@@ -45,7 +46,13 @@ export const Route = createFileRoute("/api/orders/confirm-receipt")({
 
         const tenant = await prisma.tenant.findUnique({
           where: { id: order.tenantId },
-          select: { bankCode: true, bankAccountNumber: true, bankAccountName: true },
+          select: {
+            name: true,
+            bankCode: true,
+            bankAccountNumber: true,
+            bankAccountName: true,
+            user: { select: { email: true } },
+          },
         });
 
         await prisma.$transaction([
@@ -55,12 +62,8 @@ export const Route = createFileRoute("/api/orders/confirm-receipt")({
           }),
           // NOTE — Orphaned Payout guard:
           // If tenant has NOT filled in bank details yet, no Payout row is created here.
-          // The order still becomes COMPLETED (buyer confirmed receipt), which is correct.
-          // The gap is caught by the cron in Plan C Task C8 (api/cron/payouts), which
-          // also queries COMPLETED orders that have no associated Payout row and whose
-          // tenant NOW has bank info — and creates the missing Payout row retroactively.
-          // This means: seller filling in bank details later will eventually get paid
-          // without any manual intervention.
+          // The gap is caught by the cron in api/cron/payouts which queries COMPLETED orders
+          // that have no associated Payout row and whose tenant NOW has bank info.
           ...(tenant?.bankCode && tenant?.bankAccountNumber && tenant?.bankAccountName
             ? [
                 prisma.payout.upsert({
@@ -79,6 +82,17 @@ export const Route = createFileRoute("/api/orders/confirm-receipt")({
               ]
             : []),
         ]);
+
+        // Notify seller that order is completed (fire-and-forget)
+        if (tenant?.user?.email) {
+          void sendEmailSellerOrderCompleted({
+            sellerEmail: tenant.user.email,
+            sellerName: tenant.name,
+            orderCode: order.orderCode,
+            sellerPayout: order.sellerPayout,
+            autoCompleted: false,
+          });
+        }
 
         return Response.json({ success: true });
       },
