@@ -10,11 +10,11 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio",
-    "db:seed": "prisma db seed"
+    "db:generate": "bun --env-file=.env prisma generate",
+    "db:push": "bun --env-file=.env prisma db push",
+    "db:migrate": "bun --env-file=.env prisma migrate dev",
+    "db:studio": "bun --env-file=.env prisma studio",
+    "db:seed": "bun --env-file=.env prisma db seed"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.2",
@@ -33,6 +33,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
     "lucide-react": "^0.575.0",
+    "midtrans-client": "^1.4.3",
     "prisma": "^7.4.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
