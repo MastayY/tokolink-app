@@ -165,6 +165,7 @@ model Order {
   trackingNumber    String?     @map("tracking_number")
   biteshipOrderId   String?     @map("biteship_order_id")
   note              String?
+  packageNote       String?     @map("package_note")
   paidAt            DateTime?   @map("paid_at")
   shippedAt         DateTime?   @map("shipped_at")
   completedAt       DateTime?   @map("completed_at")

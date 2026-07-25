@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatIDR } from "@/lib/utils";
+import { PrintLabelDropdown } from "@/components/dashboard/print-label-dropdown";
 import type { Order, OrderItem } from "@prisma/client";
 
 type OrderWithItems = Order & { items: OrderItem[]; review: { id: string } | null };
@@ -88,6 +89,9 @@ export function OrderTable({ orders, onViewOrder, onShipOrder, shippingOrders }:
               >
                 {shippingOrders.has(order.id) ? "Memproses..." : "Buat Resi"}
               </Button>
+            )}
+            {order.trackingNumber && (
+              <PrintLabelDropdown orderId={order.id} />
             )}
           </div>
         </motion.div>

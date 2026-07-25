@@ -36,6 +36,7 @@ import { Route as ApiCheckoutWebhookRouteImport } from './routes/api.checkout.we
 import { Route as ApiCheckoutCancelRouteImport } from './routes/api.checkout.cancel'
 import { Route as SlugOrderOrderCodeRouteImport } from './routes/$slug_.order.$orderCode'
 import { Route as ApiDashboardOrdersOrderIdShipRouteImport } from './routes/api.dashboard.orders.$orderId.ship'
+import { Route as ApiDashboardOrdersOrderIdLabelRouteImport } from './routes/api.dashboard.orders.$orderId.label'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -173,6 +174,12 @@ const ApiDashboardOrdersOrderIdShipRoute =
     path: '/api/dashboard/orders/$orderId/ship',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiDashboardOrdersOrderIdLabelRoute =
+  ApiDashboardOrdersOrderIdLabelRouteImport.update({
+    id: '/api/dashboard/orders/$orderId/label',
+    path: '/api/dashboard/orders/$orderId/label',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/api/orders/lookup': typeof ApiOrdersLookupRoute
   '/api/shipping/areas': typeof ApiShippingAreasRoute
   '/api/shipping/rates': typeof ApiShippingRatesRoute
+  '/api/dashboard/orders/$orderId/label': typeof ApiDashboardOrdersOrderIdLabelRoute
   '/api/dashboard/orders/$orderId/ship': typeof ApiDashboardOrdersOrderIdShipRoute
 }
 export interface FileRoutesByTo {
@@ -229,6 +237,7 @@ export interface FileRoutesByTo {
   '/api/orders/lookup': typeof ApiOrdersLookupRoute
   '/api/shipping/areas': typeof ApiShippingAreasRoute
   '/api/shipping/rates': typeof ApiShippingRatesRoute
+  '/api/dashboard/orders/$orderId/label': typeof ApiDashboardOrdersOrderIdLabelRoute
   '/api/dashboard/orders/$orderId/ship': typeof ApiDashboardOrdersOrderIdShipRoute
 }
 export interface FileRoutesById {
@@ -259,6 +268,7 @@ export interface FileRoutesById {
   '/api/orders/lookup': typeof ApiOrdersLookupRoute
   '/api/shipping/areas': typeof ApiShippingAreasRoute
   '/api/shipping/rates': typeof ApiShippingRatesRoute
+  '/api/dashboard/orders/$orderId/label': typeof ApiDashboardOrdersOrderIdLabelRoute
   '/api/dashboard/orders/$orderId/ship': typeof ApiDashboardOrdersOrderIdShipRoute
 }
 export interface FileRouteTypes {
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/api/orders/lookup'
     | '/api/shipping/areas'
     | '/api/shipping/rates'
+    | '/api/dashboard/orders/$orderId/label'
     | '/api/dashboard/orders/$orderId/ship'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -318,6 +329,7 @@ export interface FileRouteTypes {
     | '/api/orders/lookup'
     | '/api/shipping/areas'
     | '/api/shipping/rates'
+    | '/api/dashboard/orders/$orderId/label'
     | '/api/dashboard/orders/$orderId/ship'
   id:
     | '__root__'
@@ -347,6 +359,7 @@ export interface FileRouteTypes {
     | '/api/orders/lookup'
     | '/api/shipping/areas'
     | '/api/shipping/rates'
+    | '/api/dashboard/orders/$orderId/label'
     | '/api/dashboard/orders/$orderId/ship'
   fileRoutesById: FileRoutesById
 }
@@ -368,6 +381,7 @@ export interface RootRouteChildren {
   ApiOrdersLookupRoute: typeof ApiOrdersLookupRoute
   ApiShippingAreasRoute: typeof ApiShippingAreasRoute
   ApiShippingRatesRoute: typeof ApiShippingRatesRoute
+  ApiDashboardOrdersOrderIdLabelRoute: typeof ApiDashboardOrdersOrderIdLabelRoute
   ApiDashboardOrdersOrderIdShipRoute: typeof ApiDashboardOrdersOrderIdShipRoute
 }
 
@@ -562,6 +576,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDashboardOrdersOrderIdShipRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/dashboard/orders/$orderId/label': {
+      id: '/api/dashboard/orders/$orderId/label'
+      path: '/api/dashboard/orders/$orderId/label'
+      fullPath: '/api/dashboard/orders/$orderId/label'
+      preLoaderRoute: typeof ApiDashboardOrdersOrderIdLabelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -621,6 +642,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOrdersLookupRoute: ApiOrdersLookupRoute,
   ApiShippingAreasRoute: ApiShippingAreasRoute,
   ApiShippingRatesRoute: ApiShippingRatesRoute,
+  ApiDashboardOrdersOrderIdLabelRoute: ApiDashboardOrdersOrderIdLabelRoute,
   ApiDashboardOrdersOrderIdShipRoute: ApiDashboardOrdersOrderIdShipRoute,
 }
 export const routeTree = rootRouteImport
