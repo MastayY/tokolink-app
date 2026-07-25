@@ -17,6 +17,7 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [basePrice, setBasePrice] = useState(initial?.basePrice ?? 0);
+  const [weightGrams, setWeightGrams] = useState(initial?.weightGrams ?? 500);
   const [image, setImage] = useState(initial?.image ?? "");
   const [variantGroups, setVariantGroups] = useState<ProductVariantGroup[]>(
     initial?.variantGroups ?? [],
@@ -57,6 +58,7 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
                 name,
                 description,
                 basePrice: Number(basePrice),
+                weightGrams: Number(weightGrams) || 500,
                 image:
                   image || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80",
                 variantGroups: variantGroups.length > 0 ? variantGroups : undefined,
@@ -81,6 +83,21 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
                 onChange={(e) => setBasePrice(+e.target.value)}
                 required
               />
+            </Field>
+            <Field label="Berat Produk (gram)">
+              <Input
+                type="number"
+                min={1}
+                value={weightGrams}
+                onChange={(e) => setWeightGrams(+e.target.value || 500)}
+                required
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Digunakan untuk kalkulasi ongkos kirim. Default: 500g.
+                {weightGrams === 500 && (
+                  <span className="text-amber-500 font-medium ml-1">⚠ Masih default — ubah jika perlu</span>
+                )}
+              </p>
             </Field>
             <Field label="Gambar Produk">
               <ImageUpload value={image} onChange={(url) => setImage(url)} />
@@ -148,7 +165,7 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
                     {/* Options inside this group */}
                     <div className="pl-4 border-l-2 border-border space-y-2">
                       <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground block mb-2">
-                        Pilihan & Harga Ekstra
+                        Pilihan, Harga Ekstra & Berat Override
                       </span>
 
                       {group.options?.map((option, optionIdx) => (
@@ -177,7 +194,23 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
                               setVariantGroups(copy);
                             }}
                             placeholder="+Harga (Rp)"
-                            className="w-32 shrink-0"
+                            className="w-28 shrink-0"
+                          />
+                          <Input
+                            type="number"
+                            value={option.weightGrams ?? ""}
+                            onChange={(e) => {
+                              const copy = [...variantGroups];
+                              const opts = [...group.options];
+                              opts[optionIdx] = {
+                                ...option,
+                                weightGrams: e.target.value ? Number(e.target.value) : undefined,
+                              };
+                              copy[groupIdx] = { ...group, options: opts };
+                              setVariantGroups(copy);
+                            }}
+                            placeholder="Berat (g)"
+                            className="w-24 shrink-0"
                           />
                           <button
                             type="button"

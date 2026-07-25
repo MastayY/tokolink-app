@@ -7,5 +7,15 @@
       "source": "/assets/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/auto-complete",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/payouts",
+      "schedule": "0 2 * * *"
+    }
   ]
 }

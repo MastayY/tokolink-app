@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth, useTenant } from "@/lib/store";
 import { useAuthGuard } from "@/hooks/use-auth-guard";
@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
 import { getMyTenant } from "@/server/tenant.functions";
+import { Spinner } from "@/components/ui/spinner";
 
 export const Route = createFileRoute("/dashboard")({
   loader: async () => {
@@ -41,6 +42,11 @@ function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Detect route transition loading state
+  const isNavigating = useRouterState({
+    select: (s) => s.status === "pending" || s.isLoading,
+  });
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -59,7 +65,7 @@ function DashboardLayout() {
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <p className="text-sm font-medium text-muted-foreground animate-pulse font-medium">
+        <p className="text-sm font-medium text-muted-foreground animate-pulse">
           Memuat...
         </p>
       </div>
@@ -71,7 +77,20 @@ function DashboardLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen bg-background text-foreground relative">
+      {/* Top Animated Progress Bar on Route Transition */}
+      <AnimatePresence>
+        {isNavigating && (
+          <motion.div
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed top-0 left-0 right-0 z-50 h-1 bg-lime origin-left"
+          />
+        )}
+      </AnimatePresence>
+
       {/* 1. Desktop Sticky Sidebar (Hidden on mobile) */}
       <motion.aside
         animate={{ width: isCollapsed ? 72 : 256 }}
@@ -130,8 +149,23 @@ function DashboardLayout() {
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         <DashboardHeader setIsMobileOpen={setIsMobileOpen} tenant={tenant} />
 
-        {/* Dashboard Pages Main Section */}
-        <main className="flex-1 p-6 md:p-10 max-w-6xl w-full mx-auto">
+        {/* Dashboard Pages Main Section with Loading Overlay */}
+        <main className="flex-1 p-6 md:p-10 max-w-6xl w-full mx-auto relative">
+          <AnimatePresence>
+            {isNavigating && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-20 flex items-start justify-center pt-20 bg-background/40 backdrop-blur-[2px]"
+              >
+                <div className="flex items-center gap-2.5 rounded-full border border-border bg-card px-5 py-2.5 text-xs font-medium text-foreground shadow-xl animate-bounce">
+                  <Spinner size="sm" />
+                  <span>Memuat Halaman...</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <Outlet />
         </main>
       </div>

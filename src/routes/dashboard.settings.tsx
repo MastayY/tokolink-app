@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ShippingOriginSection } from "@/components/dashboard/shipping-origin-section";
+import { BankAccountSection } from "@/components/dashboard/bank-account-section";
 
 export const Route = createFileRoute("/dashboard/settings")({
   component: SettingsPage,
@@ -31,7 +33,7 @@ function SettingsPage() {
   }, [tenant]);
 
   return (
-    <div className="max-w-2xl space-y-10 bg-background text-foreground">
+    <div className="max-w-2xl space-y-10 bg-background text-foreground pb-12">
       <PageHeader label="Pengaturan" title="Identitas toko" />
 
       <form
@@ -44,7 +46,7 @@ function SettingsPage() {
             toast.error(err.message || "Gagal menyimpan pengaturan");
           }
         }}
-        className="space-y-6"
+        className="space-y-6 border-b border-border pb-10"
       >
         <Field label="Nama toko">
           <Input value={name} onChange={(e) => setName(e.target.value)} required />
@@ -68,6 +70,14 @@ function SettingsPage() {
           <Button type="submit">Simpan perubahan</Button>
         </div>
       </form>
+
+      <div className="border-b border-border pb-10">
+        <ShippingOriginSection />
+      </div>
+
+      <div>
+        <BankAccountSection />
+      </div>
     </div>
   );
 }

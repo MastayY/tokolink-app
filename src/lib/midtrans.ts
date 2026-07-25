@@ -63,21 +63,31 @@ export interface IrisDisbursementInput {
 export async function executeIrisPayout(
   input: IrisDisbursementInput
 ): Promise<{ reference_no: string }> {
-  const result = await iris.createPayouts({
-    payouts: [{
-      beneficiary_name: input.beneficiaryName,
-      beneficiary_account: input.beneficiaryAccount,
-      beneficiary_bank: input.beneficiaryBank,
-      beneficiary_email: "",
-      amount: String(input.amount),
-      notes: input.notes,
-    }],
-  });
-  const payout = result?.payouts?.[0];
-  if (!payout?.reference_no) {
-    throw new Error(`Iris payout failed: ${JSON.stringify(result)}`);
+  try {
+    const result = await iris.createPayouts({
+      payouts: [
+        {
+          beneficiary_name: input.beneficiaryName,
+          beneficiary_account: input.beneficiaryAccount,
+          beneficiary_bank: input.beneficiaryBank,
+          beneficiary_email: "",
+          amount: String(input.amount),
+          notes: input.notes,
+        },
+      ],
+    });
+    const payout = result?.payouts?.[0];
+    if (!payout?.reference_no) {
+      throw new Error(`Iris payout failed: ${JSON.stringify(result)}`);
+    }
+    return { reference_no: payout.reference_no };
+  } catch (err: any) {
+    if (!isProduction && (err.httpStatusCode === 401 || err.message?.includes("401"))) {
+      console.warn("[Iris Dev Fallback] Midtrans Iris Sandbox 401 (Iris Key not activated). Simulating payout reference in development mode.");
+      return { reference_no: `IRIS-SIM-${Date.now()}` };
+    }
+    throw err;
   }
-  return { reference_no: payout.reference_no };
 }
 
 /**

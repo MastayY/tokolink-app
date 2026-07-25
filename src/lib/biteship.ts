@@ -33,25 +33,72 @@ export interface BiteshipCourierRate {
   courier_code: string;
   courier_service_name: string;
   courier_service_code: string;
-  price: number;
-  duration: string;
+  price: number; // Final price (includes insurance/COD if enabled) - used for shippingCost
+  shipping_fee?: number; // Base shipping fee before add-ons
+  duration: string; // e.g. "2 - 3 days"
+  available_for_cash_on_delivery?: boolean;
+  available_for_insurance?: boolean;
 }
 
-export async function getBiteshipRates(req: {
-  originAreaId: string;
-  destinationAreaId: string;
-  items: Array<{ name: string; value: number; weight: number; quantity: number }>;
-}): Promise<BiteshipCourierRate[]> {
+export interface BiteshipRateItem {
+  name: string;
+  value: number;
+  weight: number; // in grams
+  quantity: number;
+  category?: string; // e.g. "fashion", "food_and_drink", "others"
+  length?: number; // in cm (volumetric weight)
+  width?: number; // in cm
+  height?: number; // in cm
+}
+
+export interface BiteshipRateRequest {
+  // Mode 1: By Area ID (Recommended & default)
+  originAreaId?: string;
+  destinationAreaId?: string;
+  // Mode 2: By Postal Code
+  originPostalCode?: number;
+  destinationPostalCode?: number;
+  // Mode 3: By Coordinates (Required for instant couriers e.g. Grab/Gojek)
+  originLatitude?: number;
+  originLongitude?: number;
+  destinationLatitude?: number;
+  destinationLongitude?: number;
+  // Couriers list string
+  couriers?: string;
+  items: BiteshipRateItem[];
+}
+
+export async function getBiteshipRates(req: BiteshipRateRequest): Promise<BiteshipCourierRate[]> {
+  const body: Record<string, any> = {
+    couriers: req.couriers ?? "jne,jnt,sicepat,anteraja,ninja,pos",
+    items: req.items.map((item) => ({
+      name: item.name,
+      value: item.value,
+      weight: item.weight,
+      quantity: item.quantity,
+      ...(item.category ? { category: item.category } : {}),
+      ...(item.length ? { length: item.length } : {}),
+      ...(item.width ? { width: item.width } : {}),
+      ...(item.height ? { height: item.height } : {}),
+    })),
+  };
+
+  // Location params (Mode 1, 2, 3, or Mix)
+  if (req.originAreaId) body.origin_area_id = req.originAreaId;
+  if (req.destinationAreaId) body.destination_area_id = req.destinationAreaId;
+  if (req.originPostalCode) body.origin_postal_code = req.originPostalCode;
+  if (req.destinationPostalCode) body.destination_postal_code = req.destinationPostalCode;
+  if (req.originLatitude) body.origin_latitude = req.originLatitude;
+  if (req.originLongitude) body.origin_longitude = req.originLongitude;
+  if (req.destinationLatitude) body.destination_latitude = req.destinationLatitude;
+  if (req.destinationLongitude) body.destination_longitude = req.destinationLongitude;
+
   const res = await fetch(`${BASE_URL}/rates/couriers`, {
     method: "POST",
     headers: headers(),
-    body: JSON.stringify({
-      origin_area_id: req.originAreaId,
-      destination_area_id: req.destinationAreaId,
-      couriers: "jne,jnt,sicepat,anteraja,ninja,pos",
-      items: req.items,
-    }),
+    body: JSON.stringify(body),
   });
+
   if (!res.ok) throw new Error(`Biteship rate check failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return (data.pricing ?? []) as BiteshipCourierRate[];
@@ -63,7 +110,9 @@ export interface BiteshipOrderResult {
 }
 
 export async function createBiteshipOrder(req: {
-  shipperName: string;
+  originContactName: string;
+  originContactPhone: string;
+  originAddress: string;
   originAreaId: string;
   destinationContactName: string;
   destinationContactPhone: string;
@@ -77,7 +126,9 @@ export async function createBiteshipOrder(req: {
     method: "POST",
     headers: headers(),
     body: JSON.stringify({
-      shipper_contact_name: req.shipperName,
+      origin_contact_name: req.originContactName,
+      origin_contact_phone: req.originContactPhone,
+      origin_address: req.originAddress,
       origin_area_id: req.originAreaId,
       destination_contact_name: req.destinationContactName,
       destination_contact_phone: req.destinationContactPhone,

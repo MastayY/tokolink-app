@@ -22,7 +22,8 @@ export const Route = createFileRoute("/api/checkout")({
 
         const parsed = checkoutBodySchema.safeParse(body);
         if (!parsed.success) {
-          return Response.json({ error: parsed.error.flatten() }, { status: 422 });
+          const firstMessage = parsed.error.issues[0]?.message ?? "Data checkout tidak valid";
+          return Response.json({ error: firstMessage }, { status: 422 });
         }
 
         const {
@@ -46,7 +47,6 @@ export const Route = createFileRoute("/api/checkout")({
             id: true,
             name: true,
             slug: true,
-            email: true,
             whatsapp: true,
             shippingOriginAreaId: true,
             bankCode: true,

@@ -5,6 +5,9 @@ import {
   LayoutDashboard,
   Link2,
   ShoppingBag,
+  PackageCheck,
+  Wallet,
+  Star,
   Settings,
   X,
   ChevronLeft,
@@ -25,6 +28,9 @@ const tabs: TabItem[] = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
   { to: "/dashboard/links", label: "Tautan", icon: Link2 },
   { to: "/dashboard/products", label: "Produk", icon: ShoppingBag },
+  { to: "/dashboard/orders", label: "Pesanan", icon: PackageCheck },
+  { to: "/dashboard/reviews", label: "Ulasan", icon: Star },
+  { to: "/dashboard/earnings", label: "Pendapatan", icon: Wallet },
   { to: "/dashboard/settings", label: "Pengaturan", icon: Settings },
 ];
 

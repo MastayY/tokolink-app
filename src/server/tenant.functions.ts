@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../db";
 import { authMiddleware } from "./auth-middleware";
-import { createTenantSchema, updateTenantSchema } from "../lib/schemas";
+import { createTenantSchema, updateTenantSchema, updateShippingSchema, updateBankAccountSchema } from "../lib/schemas";
 import { z } from "zod";
 
 // Fetch tenant by slug (public - for storefront)
@@ -141,4 +141,35 @@ export const updateTenant = createServerFn({ method: "POST" })
     });
 
     return tenant;
+  });
+
+export const updateShippingOrigin = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(updateShippingSchema)
+  .handler(async ({ data, context }) => {
+    const updated = await prisma.tenant.update({
+      where: { id: context.tenant!.id },
+      data: {
+        shippingOriginAreaId: data.shippingOriginAreaId,
+        shippingOriginLabel: data.shippingOriginLabel,
+      },
+      select: { shippingOriginAreaId: true, shippingOriginLabel: true },
+    });
+    return updated;
+  });
+
+export const updateBankAccount = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(updateBankAccountSchema)
+  .handler(async ({ data, context }) => {
+    const updated = await prisma.tenant.update({
+      where: { id: context.tenant!.id },
+      data: {
+        bankCode: data.bankCode,
+        bankAccountNumber: data.bankAccountNumber,
+        bankAccountName: data.bankAccountName,
+      },
+      select: { bankCode: true, bankAccountNumber: true, bankAccountName: true },
+    });
+    return updated;
   });

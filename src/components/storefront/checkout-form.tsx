@@ -129,10 +129,20 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
               id="shippingAddress"
               value={shippingAddress}
               onChange={(e) => setShippingAddress(e.target.value)}
-              placeholder="Jl. Contoh No. 1, RT/RW, Kelurahan"
+              placeholder="Jl. Contoh No. 1, RT/RW, Kelurahan, Kecamatan, Kota"
               rows={3}
+              minLength={10}
               required
             />
+            {shippingAddress.length > 0 && shippingAddress.length < 10 ? (
+              <p className="text-xs text-destructive mt-1 font-medium">
+                Alamat terlalu pendek ({shippingAddress.length}/10 karakter minimal)
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Minimal 10 karakter (masukkan nama jalan, nomor, RT/RW, dan kelurahan)
+              </p>
+            )}
           </Field>
         </section>
 
@@ -216,9 +226,9 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
             type="submit"
             size="lg"
             className="w-full py-4 text-base font-medium shadow-sm cursor-pointer"
-            disabled={!selectedArea || !selectedRate || !buyerName || !buyerPhone || !shippingAddress || isSubmitting}
+            disabled={!selectedArea || !selectedRate || !buyerName || !buyerPhone || shippingAddress.trim().length < 10 || isSubmitting}
           >
-            {isSubmitting ? "Memproses..." : `Bayar Sekarang — ${formatIDR(total)}`}
+            {isSubmitting ? "Memproses..." : `Bayar Sekarang`}
           </Button>
         </div>
       </div>

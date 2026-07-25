@@ -25,6 +25,7 @@ export const productVariantOptionSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1, "Nama opsi harus diisi").max(50),
   priceDelta: z.number().int().min(0, "Selisih harga tidak boleh negatif").default(0),
+  weightGrams: z.number().int().min(1).optional().nullable(),
 });
 
 export const productVariantGroupSchema = z.object({
@@ -38,6 +39,7 @@ export const createProductSchema = z.object({
   description: z.string().max(500, "Deskripsi maksimal 500 karakter").default(""),
   basePrice: z.number().int().min(0, "Harga dasar tidak boleh negatif"),
   image: z.string().url("URL gambar tidak valid").or(z.literal("")).default(""),
+  weightGrams: z.number().int().min(1, "Berat minimal 1 gram").default(500),
   variantGroups: z.array(productVariantGroupSchema).optional().default([]),
 });
 
@@ -65,13 +67,13 @@ export const cartItemInputSchema = z.object({
 
 export const checkoutBodySchema = z.object({
   tenantId: z.string().uuid(),
-  buyerName: z.string().min(2).max(100),
-  buyerPhone: z.string().regex(/^62\d{9,15}$/, "Format: 628xxxxxxx"),
-  shippingAddress: z.string().min(10).max(500),
-  shippingAreaId: z.string().min(1),
+  buyerName: z.string().min(2, "Nama pembeli minimal 2 karakter").max(100),
+  buyerPhone: z.string().regex(/^62\d{9,15}$/, "Nomor WhatsApp harus diawali 62 (contoh: 628123456789)"),
+  shippingAddress: z.string().min(10, "Alamat pengiriman minimal 10 karakter").max(500, "Alamat pengiriman maksimal 500 karakter"),
+  shippingAreaId: z.string().min(1, "Kecamatan/kota pengiriman harus dipilih"),
   shippingAreaLabel: z.string().min(1),
   shippingCost: z.number().int().min(0),
-  courierCompany: z.string().min(1),
+  courierCompany: z.string().min(1, "Pilih opsi kurir pengiriman"),
   courierType: z.string().min(1),
   cartItems: z.array(cartItemInputSchema).min(1, "Keranjang kosong"),
   note: z.string().max(300).optional(),

@@ -107,7 +107,7 @@ export function FloatingCart({ storeName }: FloatingCartProps) {
               <span>Memuat checkout...</span>
             </span>
           ) : (
-            `Checkout — ${formatIDR(totalPrice)} →`
+            `Checkout →`
           )}
         </Button>
         <button

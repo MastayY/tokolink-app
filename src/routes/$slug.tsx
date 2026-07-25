@@ -2,12 +2,14 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import type { Product } from "@/lib/types";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { getTenant } from "@/server/tenant.functions";
 import { StorefrontHeader } from "@/components/storefront/storefront-header";
 import { ProductCard } from "@/components/storefront/product-card";
 import { VariantSheet } from "@/components/storefront/variant-sheet";
 import { FloatingCart } from "@/components/storefront/floating-cart";
+import { StorefrontReviews } from "@/components/storefront/storefront-reviews";
 
 export const Route = createFileRoute("/$slug")({
   loader: async ({ params }) => {
@@ -62,6 +64,15 @@ export const Route = createFileRoute("/$slug")({
 function Storefront() {
   const { tenant } = Route.useLoaderData();
   const [selecting, setSelecting] = useState<Product | null>(null);
+  const [productPage, setProductPage] = useState(1);
+
+  const PRODUCTS_PER_PAGE = 6;
+  const totalProducts = tenant.products.length;
+  const totalProductPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || 1;
+  const paginatedProducts = tenant.products.slice(
+    (productPage - 1) * PRODUCTS_PER_PAGE,
+    productPage * PRODUCTS_PER_PAGE
+  );
 
   return (
     <div className="min-h-screen bg-background pb-32">
@@ -101,14 +112,49 @@ function Storefront() {
       <section className="mx-auto mt-16 max-w-2xl px-4">
         <div className="mb-6 flex items-baseline justify-between px-2">
           <h2 className="font-display text-lg font-medium tracking-tight">Katalog</h2>
-          <span className="text-xs text-muted-foreground">{tenant.products.length} produk</span>
+          <span className="text-xs text-muted-foreground">{totalProducts} produk</span>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {tenant.products.map((p, i) => (
-            <ProductCard key={p.id} product={p} delay={i * 0.04} onSelect={() => setSelecting(p)} />
-          ))}
-        </div>
+
+        {totalProducts === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center bg-card/50 text-xs text-muted-foreground">
+            Belum ada produk di katalog.
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              {paginatedProducts.map((p, i) => (
+                <ProductCard key={p.id} product={p as any} delay={i * 0.04} onSelect={() => setSelecting(p as any)} />
+              ))}
+            </div>
+
+            {/* Catalog Pagination Controls */}
+            {totalProductPages > 1 && (
+              <div className="mt-6 flex items-center justify-between px-2 text-xs">
+                <button
+                  disabled={productPage === 1}
+                  onClick={() => setProductPage((p) => Math.max(p - 1, 1))}
+                  className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 transition disabled:opacity-40 hover:bg-secondary cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Sebelum
+                </button>
+                <span className="text-muted-foreground">
+                  Halaman <strong className="text-foreground">{productPage}</strong> dari {totalProductPages}
+                </span>
+                <button
+                  disabled={productPage === totalProductPages}
+                  onClick={() => setProductPage((p) => Math.min(p + 1, totalProductPages))}
+                  className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 transition disabled:opacity-40 hover:bg-secondary cursor-pointer"
+                >
+                  Lanjut <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </section>
+
+      {/* Reviews Section */}
+      <StorefrontReviews slug={tenant.slug} />
 
       <div className="mx-auto mt-16 max-w-md px-6 text-center text-xs text-muted-foreground">
         powered by <span className="text-foreground">tokolink</span>

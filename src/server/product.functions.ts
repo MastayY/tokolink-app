@@ -46,6 +46,7 @@ export const createProduct = createServerFn({ method: "POST" })
         name: data.name,
         description: data.description || "",
         basePrice: data.basePrice,
+        weightGrams: data.weightGrams ?? 500,
         image: data.image || "",
         sortOrder: nextSortOrder,
         tenantId,
@@ -57,6 +58,7 @@ export const createProduct = createServerFn({ method: "POST" })
               create: group.options.map((opt, optIdx) => ({
                 name: opt.name,
                 priceDelta: opt.priceDelta,
+                weightGrams: opt.weightGrams ?? null,
                 sortOrder: optIdx,
               })),
             },
@@ -114,6 +116,7 @@ export const updateProduct = createServerFn({ method: "POST" })
           name: data.name,
           description: data.description,
           basePrice: data.basePrice,
+          weightGrams: data.weightGrams,
           image: data.image,
           variantGroups: data.variantGroups
             ? {
@@ -124,6 +127,7 @@ export const updateProduct = createServerFn({ method: "POST" })
                     create: group.options.map((opt, optIdx) => ({
                       name: opt.name,
                       priceDelta: opt.priceDelta,
+                      weightGrams: opt.weightGrams ?? null,
                       sortOrder: optIdx,
                     })),
                   },

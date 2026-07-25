@@ -62,11 +62,24 @@ export function useCheckout() {
             window.location.href = `/${storeSlug}/order/${code}`;
           },
           onError: () => {
+            // Payment failed — cancel the order row immediately so it doesn't linger
+            fetch("/api/checkout/cancel", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderCode: code }),
+            }).catch(() => {}); // fire-and-forget; best effort
             setStep("error");
             setError("Pembayaran gagal. Silakan coba lagi.");
           },
           onClose: () => {
-            // User closed Snap popup without paying
+            // User closed Snap popup without completing payment.
+            // Immediately cancel the order so it doesn't pollute the seller's dashboard
+            // as a zombie PENDING_PAYMENT that would only expire after ~24 hours via webhook.
+            fetch("/api/checkout/cancel", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderCode: code }),
+            }).catch(() => {}); // fire-and-forget; best effort
             setStep("idle");
           },
         });
