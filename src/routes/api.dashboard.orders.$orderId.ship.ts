@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { prisma } from "@/db";
 import { supabaseAdmin } from "@/lib/supabase.server";
 import { createBiteshipOrder } from "@/lib/biteship";
-import { sendEmailBuyerOrderShipped, notifyBuyerWhatsAppShipped } from "@/lib/notifications";
+import { notifyBuyerWhatsAppShipped } from "@/lib/notifications";
 
 function parseCookie(cookieString: string, name: string): string | null {
   const match = cookieString.match(new RegExp("(^| )" + name + "=([^;]+)"));
@@ -98,14 +98,7 @@ export const Route = createFileRoute("/api/dashboard/orders/$orderId/ship")({
           },
         });
 
-        // Notify buyer via email + WhatsApp (best-effort, fire-and-forget)
-        void sendEmailBuyerOrderShipped({
-          buyerName: order.buyerName,
-          orderCode: order.orderCode,
-          trackingNumber,
-          courierCompany: order.courierCompany ?? "",
-          storeSlug: tenant.slug,
-        });
+        // Notify buyer via WhatsApp (buyer has no email field in checkout)
         void notifyBuyerWhatsAppShipped({
           buyerPhone: order.buyerPhone,
           orderCode: order.orderCode,

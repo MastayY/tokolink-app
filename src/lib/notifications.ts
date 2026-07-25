@@ -133,45 +133,6 @@ export async function notifySellerWhatsAppNewOrder(params: {
   );
 }
 
-// ── 2. Buyer: order shipped (email) ──────────────────────────────────────────
-
-export async function sendEmailBuyerOrderShipped(params: {
-  buyerName: string;
-  orderCode: string;
-  trackingNumber: string;
-  courierCompany: string;
-  storeSlug: string;
-  buyerEmail?: string;
-}): Promise<void> {
-  if (!params.buyerEmail) return;
-  try {
-    await resend.emails.send({
-      from: SENDER,
-      to: params.buyerEmail,
-      subject: `Pesananmu sudah dikirim — ${params.orderCode}`,
-      html: buildEmailHtml({
-        title: "Pesananmu dalam perjalanan! 📦",
-        bodyHtml: `
-          <p>Halo <strong style="color:#FFFFFF">${params.buyerName}</strong>,</p>
-          <p>Kabar baik! Pesananmu sudah dikemas dan dikirim oleh penjual.</p>
-          <div class="card">
-            <div class="card-row"><span class="card-label">Kode Pesanan</span><span class="card-value accent">${params.orderCode}</span></div>
-            <div class="card-row"><span class="card-label">Kurir</span><span class="card-value">${params.courierCompany.toUpperCase()}</span></div>
-            <div class="card-row"><span class="card-label">No. Resi</span><span class="card-value">${params.trackingNumber}</span></div>
-          </div>
-          <p>Gunakan nomor resi di atas untuk melacak status pengirimanmu.</p>
-        `,
-        cta: {
-          label: "Cek Status Pesanan →",
-          href: `https://tokolink.app/${params.storeSlug}/order/${params.orderCode}`,
-        },
-      }),
-    });
-  } catch (err) {
-    console.error("[notifications] email buyer-order-shipped failed:", err);
-  }
-}
-
 // ── 3. Buyer: order shipped (WhatsApp) ───────────────────────────────────────
 
 export async function notifyBuyerWhatsAppShipped(params: {
