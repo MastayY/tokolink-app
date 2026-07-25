@@ -44,9 +44,21 @@ model Tenant {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // Shipping origin for Biteship rate calculation
+  shippingOriginAreaId  String?  @map("shipping_origin_area_id")
+  shippingOriginLabel   String?  @map("shipping_origin_label")
+
+  // Bank account for Iris Facilitator disbursement
+  bankCode              String?  @map("bank_code")
+  bankAccountNumber     String?  @map("bank_account_number")
+  bankAccountName       String?  @map("bank_account_name")
+
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   products  Product[]
   links     Link[]
+  orders    Order[]
+  payouts   Payout[]
+  reviews   Review[]
 
   @@index([slug])
   @@map("tenants")
@@ -58,6 +70,7 @@ model Product {
   description String   @default("")
   basePrice   Int      @map("base_price")
   image       String   @default("")
+  weightGrams Int      @default(500) @map("weight_grams")
   sortOrder   Int      @default(0) @map("sort_order")
   tenantId    String   @map("tenant_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
@@ -84,11 +97,12 @@ model ProductVariantGroup {
 }
 
 model ProductVariantOption {
-  id         String @id @default(uuid()) @db.Uuid
-  name       String
-  priceDelta Int    @default(0) @map("price_delta")
-  sortOrder  Int    @default(0) @map("sort_order")
-  groupId    String @map("group_id") @db.Uuid
+  id          String @id @default(uuid()) @db.Uuid
+  name        String
+  priceDelta  Int    @default(0) @map("price_delta")
+  weightGrams Int?   @map("weight_grams")
+  sortOrder   Int    @default(0) @map("sort_order")
+  groupId     String @map("group_id") @db.Uuid
 
   group ProductVariantGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
@@ -109,4 +123,113 @@ model Link {
 
   @@index([tenantId])
   @@map("links")
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum PayoutStatus {
+  SCHEDULED
+  PROCESSING
+  PAID
+  FAILED
+}
+
+model Order {
+  id                String      @id @default(uuid()) @db.Uuid
+  orderCode         String      @unique @map("order_code")
+  tenantId          String      @map("tenant_id") @db.Uuid
+  tenant            Tenant      @relation(fields: [tenantId], references: [id])
+  buyerName         String      @map("buyer_name")
+  buyerPhone        String      @map("buyer_phone")
+  shippingAddress   String      @map("shipping_address")
+  shippingAreaId    String      @map("shipping_area_id")
+  shippingAreaLabel String      @map("shipping_area_label")
+  subtotal          Int
+  shippingCost      Int         @map("shipping_cost")
+  platformFee       Int         @map("platform_fee")
+  sellerPayout      Int         @map("seller_payout")
+  status            OrderStatus @default(PENDING_PAYMENT)
+  paymentToken      String?     @map("payment_token")
+  paymentRef        String?     @map("payment_ref")
+  courierCompany    String?     @map("courier_company")
+  courierType       String?     @map("courier_type")
+  trackingNumber    String?     @map("tracking_number")
+  biteshipOrderId   String?     @map("biteship_order_id")
+  note              String?
+  paidAt            DateTime?   @map("paid_at")
+  shippedAt         DateTime?   @map("shipped_at")
+  completedAt       DateTime?   @map("completed_at")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  items   OrderItem[]
+  review  Review?
+  payout  Payout?
+
+  @@index([tenantId])
+  @@index([orderCode])
+  @@index([buyerPhone])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id            String  @id @default(uuid()) @db.Uuid
+  orderId       String  @map("order_id") @db.Uuid
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId     String  @map("product_id") @db.Uuid
+  variantId     String? @map("variant_id")
+  productName   String  @map("product_name")
+  variantName   String? @map("variant_name")
+  qty           Int
+  priceSnapshot Int     @map("price_snapshot")
+  weightGrams   Int     @map("weight_grams")
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Payout {
+  id                  String       @id @default(uuid()) @db.Uuid
+  orderId             String       @unique @map("order_id") @db.Uuid
+  order               Order        @relation(fields: [orderId], references: [id])
+  tenantId            String       @map("tenant_id") @db.Uuid
+  tenant              Tenant       @relation(fields: [tenantId], references: [id])
+  amount              Int
+  status              PayoutStatus @default(SCHEDULED)
+  bankCode            String       @map("bank_code")
+  bankAccountNumber   String       @map("bank_account_number")
+  bankAccountName     String       @map("bank_account_name")
+  irisReferenceNo     String?      @map("iris_reference_no")
+  scheduledAt         DateTime     @map("scheduled_at")
+  paidAt              DateTime?    @map("paid_at")
+  failureReason       String?      @map("failure_reason")
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("payouts")
+}
+
+model Review {
+  id        String   @id @default(uuid()) @db.Uuid
+  orderId   String   @unique @map("order_id") @db.Uuid
+  order     Order    @relation(fields: [orderId], references: [id])
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@map("reviews")
 }
