@@ -19,7 +19,16 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardProductsRouteImport } from './routes/dashboard.products'
 import { Route as DashboardLinksRouteImport } from './routes/dashboard.links'
+import { Route as ApiReviewsRouteImport } from './routes/api.reviews'
+import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
+import { Route as SlugCheckoutRouteImport } from './routes/$slug_.checkout'
+import { Route as ApiShippingRatesRouteImport } from './routes/api.shipping.rates'
+import { Route as ApiShippingAreasRouteImport } from './routes/api.shipping.areas'
+import { Route as ApiOrdersLookupRouteImport } from './routes/api.orders.lookup'
+import { Route as ApiOrdersConfirmReceiptRouteImport } from './routes/api.orders.confirm-receipt'
 import { Route as ApiOgSlugRouteImport } from './routes/api.og.$slug'
+import { Route as ApiCheckoutWebhookRouteImport } from './routes/api.checkout.webhook'
+import { Route as SlugOrderOrderCodeRouteImport } from './routes/$slug_.order.$orderCode'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -71,9 +80,54 @@ const DashboardLinksRoute = DashboardLinksRouteImport.update({
   path: '/links',
   getParentRoute: () => DashboardRoute,
 } as any)
+const ApiReviewsRoute = ApiReviewsRouteImport.update({
+  id: '/api/reviews',
+  path: '/api/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
+  id: '/api/checkout',
+  path: '/api/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SlugCheckoutRoute = SlugCheckoutRouteImport.update({
+  id: '/$slug_/checkout',
+  path: '/$slug/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiShippingRatesRoute = ApiShippingRatesRouteImport.update({
+  id: '/api/shipping/rates',
+  path: '/api/shipping/rates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiShippingAreasRoute = ApiShippingAreasRouteImport.update({
+  id: '/api/shipping/areas',
+  path: '/api/shipping/areas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrdersLookupRoute = ApiOrdersLookupRouteImport.update({
+  id: '/api/orders/lookup',
+  path: '/api/orders/lookup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrdersConfirmReceiptRoute = ApiOrdersConfirmReceiptRouteImport.update({
+  id: '/api/orders/confirm-receipt',
+  path: '/api/orders/confirm-receipt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOgSlugRoute = ApiOgSlugRouteImport.update({
   id: '/api/og/$slug',
   path: '/api/og/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCheckoutWebhookRoute = ApiCheckoutWebhookRouteImport.update({
+  id: '/webhook',
+  path: '/webhook',
+  getParentRoute: () => ApiCheckoutRoute,
+} as any)
+const SlugOrderOrderCodeRoute = SlugOrderOrderCodeRouteImport.update({
+  id: '/$slug_/order/$orderCode',
+  path: '/$slug/order/$orderCode',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -84,11 +138,20 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/$slug/checkout': typeof SlugCheckoutRoute
+  '/api/checkout': typeof ApiCheckoutRouteWithChildren
+  '/api/reviews': typeof ApiReviewsRoute
   '/dashboard/links': typeof DashboardLinksRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/$slug/order/$orderCode': typeof SlugOrderOrderCodeRoute
+  '/api/checkout/webhook': typeof ApiCheckoutWebhookRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
+  '/api/orders/confirm-receipt': typeof ApiOrdersConfirmReceiptRoute
+  '/api/orders/lookup': typeof ApiOrdersLookupRoute
+  '/api/shipping/areas': typeof ApiShippingAreasRoute
+  '/api/shipping/rates': typeof ApiShippingRatesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -96,11 +159,20 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/$slug/checkout': typeof SlugCheckoutRoute
+  '/api/checkout': typeof ApiCheckoutRouteWithChildren
+  '/api/reviews': typeof ApiReviewsRoute
   '/dashboard/links': typeof DashboardLinksRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/$slug/order/$orderCode': typeof SlugOrderOrderCodeRoute
+  '/api/checkout/webhook': typeof ApiCheckoutWebhookRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
+  '/api/orders/confirm-receipt': typeof ApiOrdersConfirmReceiptRoute
+  '/api/orders/lookup': typeof ApiOrdersLookupRoute
+  '/api/shipping/areas': typeof ApiShippingAreasRoute
+  '/api/shipping/rates': typeof ApiShippingRatesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -110,11 +182,20 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/$slug_/checkout': typeof SlugCheckoutRoute
+  '/api/checkout': typeof ApiCheckoutRouteWithChildren
+  '/api/reviews': typeof ApiReviewsRoute
   '/dashboard/links': typeof DashboardLinksRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/$slug_/order/$orderCode': typeof SlugOrderOrderCodeRoute
+  '/api/checkout/webhook': typeof ApiCheckoutWebhookRoute
   '/api/og/$slug': typeof ApiOgSlugRoute
+  '/api/orders/confirm-receipt': typeof ApiOrdersConfirmReceiptRoute
+  '/api/orders/lookup': typeof ApiOrdersLookupRoute
+  '/api/shipping/areas': typeof ApiShippingAreasRoute
+  '/api/shipping/rates': typeof ApiShippingRatesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -125,11 +206,20 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/onboarding'
     | '/sitemap.xml'
+    | '/$slug/checkout'
+    | '/api/checkout'
+    | '/api/reviews'
     | '/dashboard/links'
     | '/dashboard/products'
     | '/dashboard/settings'
     | '/dashboard/'
+    | '/$slug/order/$orderCode'
+    | '/api/checkout/webhook'
     | '/api/og/$slug'
+    | '/api/orders/confirm-receipt'
+    | '/api/orders/lookup'
+    | '/api/shipping/areas'
+    | '/api/shipping/rates'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -137,11 +227,20 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/sitemap.xml'
+    | '/$slug/checkout'
+    | '/api/checkout'
+    | '/api/reviews'
     | '/dashboard/links'
     | '/dashboard/products'
     | '/dashboard/settings'
     | '/dashboard'
+    | '/$slug/order/$orderCode'
+    | '/api/checkout/webhook'
     | '/api/og/$slug'
+    | '/api/orders/confirm-receipt'
+    | '/api/orders/lookup'
+    | '/api/shipping/areas'
+    | '/api/shipping/rates'
   id:
     | '__root__'
     | '/'
@@ -150,11 +249,20 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/onboarding'
     | '/sitemap.xml'
+    | '/$slug_/checkout'
+    | '/api/checkout'
+    | '/api/reviews'
     | '/dashboard/links'
     | '/dashboard/products'
     | '/dashboard/settings'
     | '/dashboard/'
+    | '/$slug_/order/$orderCode'
+    | '/api/checkout/webhook'
     | '/api/og/$slug'
+    | '/api/orders/confirm-receipt'
+    | '/api/orders/lookup'
+    | '/api/shipping/areas'
+    | '/api/shipping/rates'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -164,7 +272,15 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SlugCheckoutRoute: typeof SlugCheckoutRoute
+  ApiCheckoutRoute: typeof ApiCheckoutRouteWithChildren
+  ApiReviewsRoute: typeof ApiReviewsRoute
+  SlugOrderOrderCodeRoute: typeof SlugOrderOrderCodeRoute
   ApiOgSlugRoute: typeof ApiOgSlugRoute
+  ApiOrdersConfirmReceiptRoute: typeof ApiOrdersConfirmReceiptRoute
+  ApiOrdersLookupRoute: typeof ApiOrdersLookupRoute
+  ApiShippingAreasRoute: typeof ApiShippingAreasRoute
+  ApiShippingRatesRoute: typeof ApiShippingRatesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -239,11 +355,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLinksRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/api/reviews': {
+      id: '/api/reviews'
+      path: '/api/reviews'
+      fullPath: '/api/reviews'
+      preLoaderRoute: typeof ApiReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/checkout': {
+      id: '/api/checkout'
+      path: '/api/checkout'
+      fullPath: '/api/checkout'
+      preLoaderRoute: typeof ApiCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$slug_/checkout': {
+      id: '/$slug_/checkout'
+      path: '/$slug/checkout'
+      fullPath: '/$slug/checkout'
+      preLoaderRoute: typeof SlugCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/shipping/rates': {
+      id: '/api/shipping/rates'
+      path: '/api/shipping/rates'
+      fullPath: '/api/shipping/rates'
+      preLoaderRoute: typeof ApiShippingRatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/shipping/areas': {
+      id: '/api/shipping/areas'
+      path: '/api/shipping/areas'
+      fullPath: '/api/shipping/areas'
+      preLoaderRoute: typeof ApiShippingAreasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/orders/lookup': {
+      id: '/api/orders/lookup'
+      path: '/api/orders/lookup'
+      fullPath: '/api/orders/lookup'
+      preLoaderRoute: typeof ApiOrdersLookupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/orders/confirm-receipt': {
+      id: '/api/orders/confirm-receipt'
+      path: '/api/orders/confirm-receipt'
+      fullPath: '/api/orders/confirm-receipt'
+      preLoaderRoute: typeof ApiOrdersConfirmReceiptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/og/$slug': {
       id: '/api/og/$slug'
       path: '/api/og/$slug'
       fullPath: '/api/og/$slug'
       preLoaderRoute: typeof ApiOgSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/checkout/webhook': {
+      id: '/api/checkout/webhook'
+      path: '/webhook'
+      fullPath: '/api/checkout/webhook'
+      preLoaderRoute: typeof ApiCheckoutWebhookRouteImport
+      parentRoute: typeof ApiCheckoutRoute
+    }
+    '/$slug_/order/$orderCode': {
+      id: '/$slug_/order/$orderCode'
+      path: '/$slug/order/$orderCode'
+      fullPath: '/$slug/order/$orderCode'
+      preLoaderRoute: typeof SlugOrderOrderCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -267,6 +446,18 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
   DashboardRouteChildren,
 )
 
+interface ApiCheckoutRouteChildren {
+  ApiCheckoutWebhookRoute: typeof ApiCheckoutWebhookRoute
+}
+
+const ApiCheckoutRouteChildren: ApiCheckoutRouteChildren = {
+  ApiCheckoutWebhookRoute: ApiCheckoutWebhookRoute,
+}
+
+const ApiCheckoutRouteWithChildren = ApiCheckoutRoute._addFileChildren(
+  ApiCheckoutRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SlugRoute: SlugRoute,
@@ -274,7 +465,15 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SlugCheckoutRoute: SlugCheckoutRoute,
+  ApiCheckoutRoute: ApiCheckoutRouteWithChildren,
+  ApiReviewsRoute: ApiReviewsRoute,
+  SlugOrderOrderCodeRoute: SlugOrderOrderCodeRoute,
   ApiOgSlugRoute: ApiOgSlugRoute,
+  ApiOrdersConfirmReceiptRoute: ApiOrdersConfirmReceiptRoute,
+  ApiOrdersLookupRoute: ApiOrdersLookupRoute,
+  ApiShippingAreasRoute: ApiShippingAreasRoute,
+  ApiShippingRatesRoute: ApiShippingRatesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
