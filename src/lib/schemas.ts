@@ -50,3 +50,67 @@ export const createLinkSchema = z.object({
 });
 
 export const updateLinkSchema = createLinkSchema.partial();
+
+// ── Checkout / Shipping schemas ───────────────────────────────────────────────
+
+export const cartItemInputSchema = z.object({
+  productId: z.string().uuid(),
+  variantId: z.string().optional(),
+  name: z.string().min(1).max(100),
+  variantName: z.string().optional(),
+  price: z.number().int().min(0),
+  qty: z.number().int().min(1).max(99),
+  weightGrams: z.number().int().min(1),
+});
+
+export const checkoutBodySchema = z.object({
+  tenantId: z.string().uuid(),
+  buyerName: z.string().min(2).max(100),
+  buyerPhone: z.string().regex(/^62\d{9,15}$/, "Format: 628xxxxxxx"),
+  shippingAddress: z.string().min(10).max(500),
+  shippingAreaId: z.string().min(1),
+  shippingAreaLabel: z.string().min(1),
+  shippingCost: z.number().int().min(0),
+  courierCompany: z.string().min(1),
+  courierType: z.string().min(1),
+  cartItems: z.array(cartItemInputSchema).min(1, "Keranjang kosong"),
+  note: z.string().max(300).optional(),
+});
+
+export const shippingRateBodySchema = z.object({
+  tenantId: z.string().uuid(),
+  destinationAreaId: z.string().min(1),
+  cartItems: z.array(
+    z.object({
+      name: z.string(),
+      price: z.number().int(),
+      weightGrams: z.number().int().min(1),
+      qty: z.number().int().min(1),
+    })
+  ).min(1),
+});
+
+export const orderLookupSchema = z.object({
+  orderCode: z.string().regex(/^TL-[A-F0-9]{8}$/),
+  phone: z.string().regex(/^62\d{9,15}$/),
+});
+
+export const reviewSubmitSchema = z.object({
+  orderId: z.string().uuid(),
+  orderCode: z.string().regex(/^TL-[A-F0-9]{8}$/),
+  buyerPhone: z.string().regex(/^62\d{9,15}$/),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().max(500).optional(),
+});
+
+export const updateShippingSchema = z.object({
+  shippingOriginAreaId: z.string().min(1),
+  shippingOriginLabel: z.string().min(1),
+});
+
+export const updateBankAccountSchema = z.object({
+  bankCode: z.string().min(2).max(10),
+  bankAccountNumber: z.string().regex(/^\d{6,20}$/, "Nomor rekening hanya angka"),
+  bankAccountName: z.string().min(2).max(100),
+});
+
