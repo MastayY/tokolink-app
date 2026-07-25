@@ -29,3 +29,18 @@ export function getErrorMessage(err: any): string {
   }
   return msg;
 }
+
+/**
+ * Normalizes an Indonesian phone number to the 62xxx format required by the API.
+ * Accepts: 08xxx, +62xxx, 62xxx, 8xxx
+ * Returns: 62xxx (E.164-style without +)
+ * Returns the original string unchanged if it doesn't look like an Indonesian number.
+ */
+export function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, ""); // strip all non-digits
+  if (digits.startsWith("62")) return digits;
+  if (digits.startsWith("0")) return "62" + digits.slice(1);
+  if (digits.startsWith("8")) return "62" + digits;
+  return digits; // unrecognized — return as-is and let Zod validation surface the error
+}
+
