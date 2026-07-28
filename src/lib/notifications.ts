@@ -6,6 +6,7 @@
  * bg #0A0A0A | container #121212 | border #1F1F1F | accent #D4FF33
  */
 import { Resend } from "resend";
+import { getAppUrl } from "@/lib/utils";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const SENDER =
@@ -113,7 +114,7 @@ export async function sendEmailSellerNewOrder(params: {
             <div class="card-row"><span class="card-label">Subtotal</span><span class="card-value">Rp${params.subtotal.toLocaleString("id-ID")}</span></div>
           </div>
         `,
-        cta: { label: "Lihat Pesanan →", href: "https://tokolink.app/dashboard/orders" },
+        cta: { label: "Lihat Pesanan →", href: `${getAppUrl()}/dashboard/orders` },
       }),
     });
   } catch (err) {
@@ -129,7 +130,7 @@ export async function notifySellerWhatsAppNewOrder(params: {
 }): Promise<void> {
   await sendWhatsApp(
     params.sellerPhone,
-    `🛍️ *Pesanan baru masuk!*\n\nKode: *${params.orderCode}*\nDari: ${params.buyerName}\nSubtotal: Rp${params.subtotal.toLocaleString("id-ID")}\n\nBuka dashboard: https://tokolink.app/dashboard/orders`
+    `🛍️ *Pesanan baru masuk!*\n\nKode: *${params.orderCode}*\nDari: ${params.buyerName}\nSubtotal: Rp${params.subtotal.toLocaleString("id-ID")}\n\nBuka dashboard: ${getAppUrl()}/dashboard/orders`
   );
 }
 
@@ -144,7 +145,7 @@ export async function notifyBuyerWhatsAppShipped(params: {
 }): Promise<void> {
   await sendWhatsApp(
     params.buyerPhone,
-    `📦 *Pesananmu dikirim!*\n\nKode: *${params.orderCode}*\nKurir: ${params.courierCompany.toUpperCase()}\nResi: *${params.trackingNumber}*\n\nCek status: https://tokolink.app/${params.storeSlug}/order/${params.orderCode}`
+    `📦 *Pesananmu dikirim!*\n\nKode: *${params.orderCode}*\nKurir: ${params.courierCompany.toUpperCase()}\nResi: *${params.trackingNumber}*\n\nCek status: ${getAppUrl()}/${params.storeSlug}/order/${params.orderCode}`
   );
 }
 
@@ -178,7 +179,7 @@ export async function sendEmailSellerOrderCompleted(params: {
           </div>
           <p>Dana akan diproses otomatis oleh sistem Tokolink ke rekening yang sudah kamu daftarkan.</p>
         `,
-        cta: { label: "Lihat Pendapatan →", href: "https://tokolink.app/dashboard/earnings" },
+        cta: { label: "Lihat Pendapatan →", href: `${getAppUrl()}/dashboard/earnings` },
       }),
     });
   } catch (err) {
@@ -212,7 +213,7 @@ export async function sendEmailSellerPayoutSuccess(params: {
           </div>
           <p>Biasanya masuk dalam beberapa menit hingga 1 jam tergantung bank tujuan.</p>
         `,
-        cta: { label: "Lihat Riwayat Pencairan →", href: "https://tokolink.app/dashboard/earnings" },
+        cta: { label: "Lihat Riwayat Pencairan →", href: `${getAppUrl()}/dashboard/earnings` },
       }),
     });
   } catch (err) {
@@ -252,7 +253,7 @@ export async function sendEmailSellerPayoutFailed(params: {
           <p>Ada kendala teknis saat mengirim dana <span class="accent">Rp${params.amount.toLocaleString("id-ID")}</span> untuk pesanan <span class="accent">${params.orderCode}</span> ke rekeningmu.</p>
           <p>Dana kamu <strong style="color:#FFFFFF">aman</strong> dan tim kami sedang menindaklanjuti secara otomatis. Pastikan data rekening di pengaturan sudah benar dan aktif.</p>
         `,
-        cta: { label: "Cek Pengaturan Rekening →", href: "https://tokolink.app/dashboard/settings" },
+        cta: { label: "Cek Pengaturan Rekening →", href: `${getAppUrl()}/dashboard/settings` },
       }),
     });
   } catch (err) {

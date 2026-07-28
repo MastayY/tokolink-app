@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Label } from "@/components/ui/label";
+import { getAppUrl, getAppHost } from "@/lib/utils";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
     meta: [{ title: "Onboarding — Tokolink" }],
-    links: [{ rel: "canonical", href: "https://tokolink.app/onboarding" }],
+    links: [{ rel: "canonical", href: `${getAppUrl()}/onboarding` }],
   }),
   component: Onboarding,
 });
@@ -113,7 +114,7 @@ function Onboarding() {
             <Label htmlFor="slug-input">URL Toko</Label>
             <div className="flex items-center border-b border-border focus-within:border-foreground transition">
               <span className="font-display text-lg text-muted-foreground pl-1 shrink-0">
-                tokolink.app/
+                {getAppHost()}/
               </span>
               <Input
                 id="slug-input"
@@ -127,7 +128,7 @@ function Onboarding() {
             </div>
             {cleanSlug && (
               <p className="mt-2 text-xs text-muted-foreground">
-                URL kamu: <span className="text-foreground">tokolink.app/{cleanSlug}</span>
+                URL kamu: <span className="text-foreground">{getAppHost()}/{cleanSlug}</span>
               </p>
             )}
           </div>

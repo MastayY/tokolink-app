@@ -4,7 +4,7 @@ import { useTenant } from "@/lib/store";
 import { PageHeader } from "@/components/layout/page-header";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR } from "@/lib/utils";
+import { formatIDR, getAppUrl, getAppHost } from "@/lib/utils";
 import { getOverviewData } from "@/server/order.functions";
 import {
   Wallet,
@@ -65,12 +65,12 @@ function Overview() {
           <p className="mt-1 text-sm text-muted-foreground">
             URL Toko:{" "}
             <a
-              href={`https://tokolink.app/${tenant.slug}`}
+              href={`${getAppUrl()}/${tenant.slug}`}
               target="_blank"
               rel="noreferrer"
               className="font-medium text-foreground hover:underline inline-flex items-center gap-1"
             >
-              tokolink.app/{tenant.slug} <ArrowUpRight className="h-3.5 w-3.5" />
+              {getAppHost()}/{tenant.slug} <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
           </p>
         </div>

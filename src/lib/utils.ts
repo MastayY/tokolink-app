@@ -44,3 +44,35 @@ export function normalizePhone(raw: string): string {
   return digits; // unrecognized — return as-is and let Zod validation surface the error
 }
 
+/**
+ * Returns the base URL of the platform.
+ * Reads VITE_APP_URL or APP_URL from env, defaulting to "https://tokolink.app".
+ * Trailing slashes are stripped.
+ */
+export function getAppUrl(): string {
+  let url = "";
+  if (typeof process !== "undefined" && (process.env.VITE_APP_URL || process.env.APP_URL)) {
+    url = process.env.VITE_APP_URL || process.env.APP_URL || "";
+  } else if (typeof import.meta !== "undefined" && import.meta.env && (import.meta.env as any).VITE_APP_URL) {
+    url = (import.meta.env as any).VITE_APP_URL;
+  }
+  if (!url && typeof window !== "undefined") {
+    url = window.location.origin;
+  }
+  if (!url) {
+    url = "https://tokolink.app";
+  }
+  return url.replace(/\/+$/, "");
+}
+
+/**
+ * Returns the domain/host of the platform (e.g. "tokolink.app" or "localhost:3000").
+ */
+export function getAppHost(): string {
+  try {
+    return new URL(getAppUrl()).host;
+  } catch {
+    return "tokolink.app";
+  }
+}
+

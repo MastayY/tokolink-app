@@ -7,6 +7,7 @@ import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
 import { getMyTenant } from "@/server/tenant.functions";
 import { Spinner } from "@/components/ui/spinner";
+import { getAppUrl } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
   loader: async () => {
@@ -22,13 +23,13 @@ export const Route = createFileRoute("/dashboard")({
       { title: "Dashboard — Tokolink" },
       { property: "og:title", content: "Dashboard — Tokolink" },
       { property: "og:description", content: "Kelola toko online UMKM Anda." },
-      { property: "og:image", content: "https://tokolink.app/og-auth.png" },
+      { property: "og:image", content: `${getAppUrl()}/og-auth.png` },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:image", content: "https://tokolink.app/og-auth.png" },
+      { name: "twitter:image", content: `${getAppUrl()}/og-auth.png` },
     ],
-    links: [{ rel: "canonical", href: "https://tokolink.app/dashboard" }],
+    links: [{ rel: "canonical", href: `${getAppUrl()}/dashboard` }],
   }),
   component: DashboardLayout,
 });
@@ -65,9 +66,7 @@ function DashboardLayout() {
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <p className="text-sm font-medium text-muted-foreground animate-pulse">
-          Memuat...
-        </p>
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -157,12 +156,9 @@ function DashboardLayout() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 z-20 flex items-start justify-center pt-20 bg-background/40 backdrop-blur-[2px]"
+                className="absolute inset-0 z-20 flex items-center justify-center bg-background/50 backdrop-blur-[2px]"
               >
-                <div className="flex items-center gap-2.5 rounded-full border border-border bg-card px-5 py-2.5 text-xs font-medium text-foreground shadow-xl animate-bounce">
-                  <Spinner size="sm" />
-                  <span>Memuat Halaman...</span>
-                </div>
+                <Spinner size="lg" />
               </motion.div>
             )}
           </AnimatePresence>

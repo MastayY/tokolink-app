@@ -47,14 +47,14 @@ export function OrderTable({ orders, onViewOrder, onShipOrder, shippingOrders }:
   }
 
   return (
-    <div className="divide-y divide-border border border-border rounded-xl overflow-hidden">
+    <div className="divide-y divide-border border border-border rounded-xl">
       {orders.map((order, idx) => (
         <motion.div
           key={order.id}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: idx * 0.03, duration: 0.2, ease: [0.2, 0, 0, 1] }}
-          className="flex items-center justify-between px-4 py-4 bg-card hover:bg-muted/30 transition-colors"
+          className="flex items-center justify-between px-4 py-4 bg-card hover:bg-muted/30 transition-colors first:rounded-t-xl last:rounded-b-xl"
         >
           <div className="space-y-1 min-w-0">
             <div className="flex items-center gap-2">

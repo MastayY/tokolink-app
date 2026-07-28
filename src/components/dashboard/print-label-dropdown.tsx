@@ -10,6 +10,7 @@ interface PrintLabelDropdownProps {
 
 export function PrintLabelDropdown({ orderId }: PrintLabelDropdownProps) {
   const [open, setOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   // Close when clicking outside
@@ -23,6 +24,16 @@ export function PrintLabelDropdown({ orderId }: PrintLabelDropdownProps) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
 
+  const toggleOpen = () => {
+    if (!open && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // Dropdown menu is ~140px tall; open upwards if space below is limited (< 160px)
+      setDropUp(spaceBelow < 160);
+    }
+    setOpen((v) => !v);
+  };
+
   const handleDownload = (size: LabelSizeKey) => {
     // Direct navigation — browser handles "attachment" Content-Disposition as file download
     window.location.href = `/api/dashboard/orders/${orderId}/label?size=${size}`;
@@ -34,7 +45,7 @@ export function PrintLabelDropdown({ orderId }: PrintLabelDropdownProps) {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         className="flex items-center gap-1.5"
       >
         <Printer className="h-3.5 w-3.5" />
@@ -45,7 +56,11 @@ export function PrintLabelDropdown({ orderId }: PrintLabelDropdownProps) {
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border border-border bg-card shadow-xl overflow-hidden">
+        <div
+          className={`absolute right-0 z-50 w-48 rounded-xl border border-border bg-card shadow-xl overflow-hidden ${
+            dropUp ? "bottom-full mb-1" : "top-full mt-1"
+          }`}
+        >
           {Object.values(LABEL_SIZES).map((s) => (
             <button
               key={s.key}
