@@ -98,12 +98,14 @@ export const Route = createFileRoute("/api/dashboard/orders/$orderId/ship")({
           },
         });
 
-        // Notify buyer via WhatsApp (buyer has no email field in checkout)
+        // Notify buyer via WhatsApp
         void notifyBuyerWhatsAppShipped({
           buyerPhone: order.buyerPhone,
+          buyerName: order.buyerName,
           orderCode: order.orderCode,
           trackingNumber,
           courierCompany: order.courierCompany ?? "",
+          storeName: tenant.name,
           storeSlug: tenant.slug,
         });
 

@@ -1,7 +1,10 @@
 // src/lib/order-lifecycle.ts
 // Shared server-side order lifecycle helpers. SERVER-ONLY.
 import { prisma } from "@/db";
-import { sendEmailSellerOrderCompleted } from "@/lib/notifications";
+import {
+  sendEmailSellerOrderCompleted,
+  notifyBuyerWhatsAppCompleted,
+} from "@/lib/notifications";
 
 /** MAX(now + 1 day, paidAt + 3 days) — payout scheduling buffer. */
 export function computePayoutSchedule(paidAt: Date | null): Date {
@@ -84,6 +87,16 @@ export async function markOrderCompleted(
       orderCode: order.orderCode,
       sellerPayout: order.sellerPayout,
       autoCompleted: opts.autoCompleted,
+    });
+  }
+
+  if (order.buyerPhone) {
+    void notifyBuyerWhatsAppCompleted({
+      buyerPhone: order.buyerPhone,
+      buyerName: order.buyerName,
+      orderCode: order.orderCode,
+      storeName: tenant.name,
+      storeSlug: tenant.slug,
     });
   }
 }

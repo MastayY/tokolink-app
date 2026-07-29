@@ -6,6 +6,8 @@ import {
   sendEmailSellerNewOrder,
   notifySellerWhatsAppNewOrder,
   alertAdminPayoutFailed,
+  notifyBuyerWhatsAppPaid,
+  notifyBuyerWhatsAppDigitalDelivery,
 } from "@/lib/notifications";
 import { checkRateLimit, webhookLimiter } from "@/lib/ratelimit";
 import { renderDeliveryText } from "@/lib/digital-delivery";
@@ -134,6 +136,17 @@ export const Route = createFileRoute("/api/checkout/webhook")({
           });
 
           if (updateResult.count === 1) {
+            // Send WA notification to Buyer confirming payment received
+            if (order.buyerPhone) {
+              void notifyBuyerWhatsAppPaid({
+                buyerPhone: order.buyerPhone,
+                buyerName: order.buyerName,
+                orderCode: order.orderCode,
+                storeName: order.tenant.name,
+                storeSlug: order.tenant.slug,
+              });
+            }
+
             // Fetch items with product config for stock + digital delivery
             const itemsWithProduct = await prisma.orderItem.findMany({
               where: { orderId: order.id },
@@ -186,18 +199,32 @@ export const Route = createFileRoute("/api/checkout/webhook")({
             if (autoTextItems.length > 0) {
               const deliveryNow = new Date();
               await Promise.all(
-                autoTextItems.map((item) =>
-                  prisma.orderItem.update({
+                autoTextItems.map(async (item) => {
+                  const snapshot = renderDeliveryText(item.product!.digitalDeliveryText!, {
+                    buyerName: order.buyerName,
+                    orderCode: order.orderCode,
+                  });
+                  await prisma.orderItem.update({
                     where: { id: item.id },
                     data: {
                       deliveredAt: deliveryNow,
-                      digitalDeliverySnapshot: renderDeliveryText(item.product!.digitalDeliveryText!, {
-                        buyerName: order.buyerName,
-                        orderCode: order.orderCode,
-                      }),
+                      digitalDeliverySnapshot: snapshot,
                     },
-                  }),
-                ),
+                  });
+
+                  // Send digital product via WhatsApp directly to buyer
+                  if (order.buyerPhone) {
+                    void notifyBuyerWhatsAppDigitalDelivery({
+                      buyerPhone: order.buyerPhone,
+                      buyerName: order.buyerName,
+                      orderCode: order.orderCode,
+                      storeName: order.tenant.name,
+                      storeSlug: order.tenant.slug,
+                      productName: item.productName,
+                      digitalDeliverySnapshot: snapshot,
+                    });
+                  }
+                }),
               );
 
               // If pure-digital and all items now delivered → complete immediately

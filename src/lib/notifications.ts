@@ -134,18 +134,63 @@ export async function notifySellerWhatsAppNewOrder(params: {
   );
 }
 
-// ── 3. Buyer: order shipped (WhatsApp) ───────────────────────────────────────
+// ── 3. Buyer WhatsApp Notifications ───────────────────────────────────────────
 
-export async function notifyBuyerWhatsAppShipped(params: {
+export async function notifyBuyerWhatsAppPaid(params: {
   buyerPhone: string;
+  buyerName: string;
   orderCode: string;
-  trackingNumber: string;
-  courierCompany: string;
+  storeName: string;
   storeSlug: string;
 }): Promise<void> {
   await sendWhatsApp(
     params.buyerPhone,
-    `📦 *Pesananmu dikirim!*\n\nKode: *${params.orderCode}*\nKurir: ${params.courierCompany.toUpperCase()}\nResi: *${params.trackingNumber}*\n\nCek status: ${getAppUrl()}/${params.storeSlug}/order/${params.orderCode}`
+    `🛍️ *Pembayaran Diterima!*\n\nHalo *${params.buyerName}*, pembayaran untuk pesanan *${params.orderCode}* di toko *${params.storeName}* telah berhasil diterima. Terima kasih banyak telah berbelanja di toko kami! 🙏\n\nCek rincian pesanan: ${getAppUrl()}/${params.storeSlug}/order/${params.orderCode}`
+  );
+}
+
+export async function notifyBuyerWhatsAppShipped(params: {
+  buyerPhone: string;
+  buyerName?: string;
+  orderCode: string;
+  trackingNumber: string;
+  courierCompany: string;
+  storeName?: string;
+  storeSlug: string;
+}): Promise<void> {
+  const storeText = params.storeName ? ` dari toko *${params.storeName}*` : "";
+  const nameGreeting = params.buyerName ? `Halo *${params.buyerName}*, ` : "";
+  await sendWhatsApp(
+    params.buyerPhone,
+    `📦 *Pesananmu Dikirim!*\n\n${nameGreeting}pesanan *${params.orderCode}*${storeText} sedang dalam pengiriman.\n\nKurir: *${params.courierCompany.toUpperCase()}*\nNo. Resi: *${params.trackingNumber}*\n\nCek lacak pengiriman: ${getAppUrl()}/${params.storeSlug}/order/${params.orderCode}`
+  );
+}
+
+export async function notifyBuyerWhatsAppCompleted(params: {
+  buyerPhone: string;
+  buyerName: string;
+  orderCode: string;
+  storeName: string;
+  storeSlug: string;
+}): Promise<void> {
+  await sendWhatsApp(
+    params.buyerPhone,
+    `✅ *Pesanan Selesai!*\n\nHalo *${params.buyerName}*, pesanan *${params.orderCode}* dari toko *${params.storeName}* telah selesai.\n\nTerima kasih banyak telah berbelanja di *${params.storeName}*! ❤️ Semoga kamu menyukai produknya.\n\nLihat rincian & ulasan: ${getAppUrl()}/${params.storeSlug}/order/${params.orderCode}`
+  );
+}
+
+export async function notifyBuyerWhatsAppDigitalDelivery(params: {
+  buyerPhone: string;
+  buyerName: string;
+  orderCode: string;
+  storeName: string;
+  storeSlug: string;
+  productName: string;
+  digitalDeliverySnapshot: string;
+}): Promise<void> {
+  await sendWhatsApp(
+    params.buyerPhone,
+    `⚡ *Pengiriman Produk Digital!*\n\nHalo *${params.buyerName}*, berikut adalah produk digital untuk pesanan *${params.orderCode}* dari toko *${params.storeName}*:\n\n📦 *${params.productName}*\n${params.digitalDeliverySnapshot}\n\nTerima kasih banyak telah berbelanja di *${params.storeName}*! 🙏\n\nCek pesanan: ${getAppUrl()}/${params.storeSlug}/order/${params.orderCode}`
   );
 }
 

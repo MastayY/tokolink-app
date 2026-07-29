@@ -161,24 +161,43 @@ export const markDigitalItemDelivered = createServerFn({ method: "POST" })
     const item = await prisma.orderItem.findUnique({
       where: { id: data.orderItemId },
       include: {
-        order: { select: { tenantId: true, id: true } },
+        order: {
+          include: {
+            tenant: { select: { name: true, slug: true } },
+          },
+        },
         product: { select: { isDigital: true, digitalDeliveryType: true } },
       },
     });
 
     if (!item) throw new Error("Item tidak ditemukan");
     if (item.order.tenantId !== tenantId) throw new Error("Tidak diizinkan");
-    if (!item.product.isDigital || item.product.digitalDeliveryType !== "MANUAL") {
+    if (!item.product?.isDigital || item.product?.digitalDeliveryType !== "MANUAL") {
       throw new Error("Item ini bukan produk digital manual");
     }
     if (item.deliveredAt) {
       return { alreadyDelivered: true };
     }
 
+    const deliveryNow = new Date();
     await prisma.orderItem.update({
       where: { id: item.id },
-      data: { deliveredAt: new Date() },
+      data: { deliveredAt: deliveryNow },
     });
+
+    // Send WhatsApp notification to buyer with digital delivery info
+    if (item.order.buyerPhone) {
+      const { notifyBuyerWhatsAppDigitalDelivery } = await import("@/lib/notifications");
+      void notifyBuyerWhatsAppDigitalDelivery({
+        buyerPhone: item.order.buyerPhone,
+        buyerName: item.order.buyerName,
+        orderCode: item.order.orderCode,
+        storeName: item.order.tenant.name,
+        storeSlug: item.order.tenant.slug,
+        productName: item.productName,
+        digitalDeliverySnapshot: item.digitalDeliverySnapshot || "Item digital telah diserahkan oleh penjual.",
+      });
+    }
 
     const { checkAndCompleteOrderIfEligible } = await import("@/lib/order-lifecycle");
     await checkAndCompleteOrderIfEligible(item.order.id);
