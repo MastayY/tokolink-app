@@ -33,18 +33,7 @@ export function useCheckout() {
         const res = await fetch("/api/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...payload,
-            cartItems: payload.cartItems.map((i) => ({
-              productId: i.productId,
-              variantId: i.variantId,
-              name: i.productName,
-              variantName: i.variantName,
-              price: i.unitPrice,
-              qty: i.qty,
-              weightGrams: i.weightGrams,
-            })),
-          }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Gagal membuat pesanan");

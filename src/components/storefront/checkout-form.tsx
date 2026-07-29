@@ -28,6 +28,8 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
   const [shippingAddress, setShippingAddress] = useState("");
   const [note, setNote] = useState("");
 
+  const isDigitalOnlyCart = items.length > 0 && items.every((i) => i.isDigital === true);
+
   const areaSearch = useAreaSearch();
   const [selectedArea, setSelectedArea] = useState<{ id: string; label: string } | null>(null);
   const shippingRates = useShippingRates();
@@ -36,7 +38,8 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
   const checkout = useCheckout();
 
   const subtotal = items.reduce((s, i) => s + i.unitPrice * i.qty, 0);
-  const total = subtotal + (selectedRate?.price ?? 0);
+  const shippingCost = isDigitalOnlyCart ? 0 : (selectedRate?.price ?? 0);
+  const total = subtotal + shippingCost;
 
   async function handleAreaSelect(area: { id: string; label: string } | null) {
     setSelectedArea(area);
@@ -47,9 +50,8 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedArea || !selectedRate) return;
+    if (!isDigitalOnlyCart && (!selectedArea || !selectedRate)) return;
 
-    // Fix 3: normalize before API — converts 08xxx / +62xxx → 62xxx
     const normalizedPhone = normalizePhone(buyerPhone);
 
     await checkout.submit(
@@ -57,20 +59,34 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
         tenantId,
         buyerName,
         buyerPhone: normalizedPhone,
-        shippingAddress,
-        shippingAreaId: selectedArea.id,
-        shippingAreaLabel: selectedArea.label,
-        shippingCost: selectedRate.price,
-        courierCompany: selectedRate.courier_code,
-        courierType: selectedRate.courier_service_code,
-        note,
-        cartItems: items.map((i) => ({ ...i, weightGrams: (i as any).weightGrams ?? 500 })),
+        ...(isDigitalOnlyCart
+          ? {}
+          : {
+              shippingAddress,
+              shippingAreaId: selectedArea!.id,
+              shippingAreaLabel: selectedArea!.label,
+              courierCompany: selectedRate!.courier_code,
+              courierType: selectedRate!.courier_service_code,
+            }),
+        shippingCost,
+        note: note || undefined,
+        cartItems: items.map((i) => ({
+          productId: i.productId,
+          variantId: i.variantId,
+          name: i.productName,
+          variantName: i.variantName,
+          price: i.unitPrice,
+          qty: i.qty,
+          weightGrams: i.weightGrams ?? 0,
+        })),
       },
       storeSlug
     );
   }
 
   const isSubmitting = checkout.step === "submitting" || checkout.step === "payment";
+  const isShippingValid = isDigitalOnlyCart || (selectedArea && selectedRate && shippingAddress.trim().length >= 10);
+  const canSubmit = buyerName.trim().length >= 2 && buyerPhone.trim().length >= 10 && isShippingValid && !isSubmitting;
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -78,7 +94,7 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
       <div className="lg:col-span-7 space-y-6">
         <section className="space-y-4">
           <h2 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">
-            Data Penerima
+            Data Pembeli
           </h2>
 
           <Field>
@@ -87,7 +103,7 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
               id="buyerName"
               value={buyerName}
               onChange={(e) => setBuyerName(e.target.value)}
-              placeholder="Nama penerima"
+              placeholder="Nama pembeli"
               required
             />
           </Field>
@@ -106,68 +122,76 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
           </Field>
         </section>
 
-        <section className="space-y-4">
-          <h2 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">
-            Alamat Pengiriman
-          </h2>
+        {!isDigitalOnlyCart ? (
+          <>
+            <section className="space-y-4">
+              <h2 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">
+                Alamat Pengiriman
+              </h2>
 
-          <Field>
-            <Label>Kecamatan / Kota</Label>
-            <AreaSearch
-              query={areaSearch.query}
-              onQueryChange={areaSearch.setQuery}
-              results={areaSearch.results}
-              isLoading={areaSearch.isLoading}
-              selected={selectedArea ? { id: selectedArea.id, name: "", label: selectedArea.label } : null}
-              onSelect={(a) => handleAreaSelect(a ? { id: a.id, label: a.label } : null)}
-            />
-          </Field>
+              <Field>
+                <Label>Kecamatan / Kota</Label>
+                <AreaSearch
+                  query={areaSearch.query}
+                  onQueryChange={areaSearch.setQuery}
+                  results={areaSearch.results}
+                  isLoading={areaSearch.isLoading}
+                  selected={selectedArea ? { id: selectedArea.id, name: "", label: selectedArea.label } : null}
+                  onSelect={(a) => handleAreaSelect(a ? { id: a.id, label: a.label } : null)}
+                />
+              </Field>
 
-          <Field>
-            <Label htmlFor="shippingAddress">Alamat Lengkap</Label>
-            <Textarea
-              id="shippingAddress"
-              value={shippingAddress}
-              onChange={(e) => setShippingAddress(e.target.value)}
-              placeholder="Jl. Contoh No. 1, RT/RW, Kelurahan, Kecamatan, Kota"
-              rows={3}
-              minLength={10}
-              required
-            />
-            {shippingAddress.length > 0 && shippingAddress.length < 10 ? (
-              <p className="text-xs text-destructive mt-1 font-medium">
-                Alamat terlalu pendek ({shippingAddress.length}/10 karakter minimal)
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-1">
-                Minimal 10 karakter (masukkan nama jalan, nomor, RT/RW, dan kelurahan)
-              </p>
+              <Field>
+                <Label htmlFor="shippingAddress">Alamat Lengkap</Label>
+                <Textarea
+                  id="shippingAddress"
+                  value={shippingAddress}
+                  onChange={(e) => setShippingAddress(e.target.value)}
+                  placeholder="Jl. Contoh No. 1, RT/RW, Kelurahan, Kecamatan, Kota"
+                  rows={3}
+                  minLength={10}
+                  required
+                />
+                {shippingAddress.length > 0 && shippingAddress.length < 10 ? (
+                  <p className="text-xs text-destructive mt-1 font-medium">
+                    Alamat terlalu pendek ({shippingAddress.length}/10 karakter minimal)
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Minimal 10 karakter (masukkan nama jalan, nomor, RT/RW, dan kelurahan)
+                  </p>
+                )}
+              </Field>
+            </section>
+
+            {selectedArea && (
+              <motion.section
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
+                className="space-y-4"
+              >
+                <h2 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">
+                  Pilih Kurir
+                </h2>
+                {shippingRates.isLoading ? (
+                  <p className="text-sm text-muted-foreground animate-pulse">Mengambil tarif pengiriman...</p>
+                ) : shippingRates.error ? (
+                  <p className="text-sm text-destructive">{shippingRates.error}</p>
+                ) : (
+                  <CourierPicker
+                    rates={shippingRates.rates}
+                    selected={selectedRate}
+                    onSelect={setSelectedRate}
+                  />
+                )}
+              </motion.section>
             )}
-          </Field>
-        </section>
-
-        {selectedArea && (
-          <motion.section
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
-            className="space-y-4"
-          >
-            <h2 className="font-semibold text-sm uppercase tracking-widest text-muted-foreground">
-              Pilih Kurir
-            </h2>
-            {shippingRates.isLoading ? (
-              <p className="text-sm text-muted-foreground animate-pulse">Mengambil tarif pengiriman...</p>
-            ) : shippingRates.error ? (
-              <p className="text-sm text-destructive">{shippingRates.error}</p>
-            ) : (
-              <CourierPicker
-                rates={shippingRates.rates}
-                selected={selectedRate}
-                onSelect={setSelectedRate}
-              />
-            )}
-          </motion.section>
+          </>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground text-center">
+            Semua produk ini adalah produk digital, tidak ada pengiriman fisik yang diperlukan.
+          </div>
         )}
 
         <Field>
@@ -209,7 +233,7 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
             <div className="flex justify-between text-muted-foreground">
               <span>Ongkos Kirim</span>
               <span className="text-foreground font-medium">
-                {selectedRate ? formatIDR(selectedRate.price) : "-"}
+                {isDigitalOnlyCart ? "Rp0 (Digital)" : selectedRate ? formatIDR(selectedRate.price) : "-"}
               </span>
             </div>
             <div className="flex justify-between font-semibold text-base text-foreground pt-3 border-t border-border">
@@ -226,7 +250,7 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
             type="submit"
             size="lg"
             className="w-full py-4 text-base font-medium shadow-sm cursor-pointer"
-            disabled={!selectedArea || !selectedRate || !buyerName || !buyerPhone || shippingAddress.trim().length < 10 || isSubmitting}
+            disabled={!canSubmit}
           >
             {isSubmitting ? "Memproses..." : `Bayar Sekarang`}
           </Button>

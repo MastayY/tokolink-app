@@ -14,6 +14,9 @@ export const getTenant = createServerFn({ method: "GET" })
         links: {
           orderBy: { sortOrder: "asc" },
         },
+        categories: {
+          orderBy: { sortOrder: "asc" },
+        },
         products: {
           orderBy: { sortOrder: "asc" },
           include: {
@@ -46,6 +49,9 @@ export const getMyTenant = createServerFn({ method: "GET" })
       where: { userId },
       include: {
         links: {
+          orderBy: { sortOrder: "asc" },
+        },
+        categories: {
           orderBy: { sortOrder: "asc" },
         },
         products: {

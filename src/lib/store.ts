@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CartItem, LinkItem, Product, Tenant } from "./types";
+import type { CartItem, Category, LinkItem, Product, Tenant } from "./types";
 
 // ---------- Auth ----------
 type AuthState = {
@@ -26,6 +26,7 @@ export const useAuth = create<AuthState>((set) => ({
 import { updateTenant } from "../server/tenant.functions";
 import { createProduct, updateProduct, deleteProduct } from "../server/product.functions";
 import { addLink, updateLink, deleteLink } from "../server/link.functions";
+import { createCategory, updateCategory as updateCategoryFn, deleteCategory } from "../server/category.functions";
 
 type TenantState = {
   tenant: Tenant | null;
@@ -37,6 +38,9 @@ type TenantState = {
   addProduct: (p: Omit<Product, "id">) => Promise<void>;
   updateProduct: (id: string, p: Partial<Product>) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
+  addCategory: (name: string) => Promise<void>;
+  renameCategory: (id: string, name: string) => Promise<void>;
+  removeCategory: (id: string) => Promise<void>;
 };
 
 export const useTenant = create<TenantState>((set) => ({
@@ -114,6 +118,54 @@ export const useTenant = create<TenantState>((set) => ({
         tenant: {
           ...s.tenant,
           products: s.tenant.products.filter((x) => x.id !== id),
+        },
+      };
+    });
+  },
+  addCategory: async (name) => {
+    const newCat = await createCategory({ data: { name } });
+    set((s) => {
+      if (!s.tenant) return {};
+      return {
+        tenant: {
+          ...s.tenant,
+          categories: [...s.tenant.categories, newCat as Category],
+        },
+      };
+    });
+  },
+  renameCategory: async (id, name) => {
+    const updated = await updateCategoryFn({ data: { id, name } });
+    set((s) => {
+      if (!s.tenant) return {};
+      // also update category string on products that used the old name
+      const oldName = s.tenant.categories.find((c) => c.id === id)?.name;
+      return {
+        tenant: {
+          ...s.tenant,
+          categories: s.tenant.categories.map((c) =>
+            c.id === id ? (updated as Category) : c
+          ),
+          products: s.tenant.products.map((p) =>
+            p.category === oldName ? { ...p, category: (updated as Category).name } : p
+          ),
+        },
+      };
+    });
+  },
+  removeCategory: async (id) => {
+    const catName = useTenant.getState().tenant?.categories.find((c) => c.id === id)?.name;
+    await deleteCategory({ data: id });
+    set((s) => {
+      if (!s.tenant) return {};
+      return {
+        tenant: {
+          ...s.tenant,
+          categories: s.tenant.categories.filter((c) => c.id !== id),
+          // nullify category on products that belonged to this category
+          products: s.tenant.products.map((p) =>
+            p.category === catName ? { ...p, category: null } : p
+          ),
         },
       };
     });

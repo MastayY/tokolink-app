@@ -23,7 +23,19 @@ export const getMyOrders = createServerFn({ method: "GET" })
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
         where,
-        include: { items: true, review: { select: { id: true } } },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: {
+                  isDigital: true,
+                  digitalDeliveryType: true,
+                },
+              },
+            },
+          },
+          review: { select: { id: true } },
+        },
         orderBy: { createdAt: "desc" },
         take: PAGE_SIZE,
         skip: (data.page - 1) * PAGE_SIZE,
@@ -138,3 +150,39 @@ export const getPendingActionCount = createServerFn({ method: "GET" })
     });
     return { count };
   });
+
+export const markDigitalItemDelivered = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(z.object({ orderItemId: z.string().uuid() }))
+  .handler(async ({ data, context }) => {
+    const tenantId = context.tenant?.id;
+    if (!tenantId) throw new Error("Unauthorized");
+
+    const item = await prisma.orderItem.findUnique({
+      where: { id: data.orderItemId },
+      include: {
+        order: { select: { tenantId: true, id: true } },
+        product: { select: { isDigital: true, digitalDeliveryType: true } },
+      },
+    });
+
+    if (!item) throw new Error("Item tidak ditemukan");
+    if (item.order.tenantId !== tenantId) throw new Error("Tidak diizinkan");
+    if (!item.product.isDigital || item.product.digitalDeliveryType !== "MANUAL") {
+      throw new Error("Item ini bukan produk digital manual");
+    }
+    if (item.deliveredAt) {
+      return { alreadyDelivered: true };
+    }
+
+    await prisma.orderItem.update({
+      where: { id: item.id },
+      data: { deliveredAt: new Date() },
+    });
+
+    const { checkAndCompleteOrderIfEligible } = await import("@/lib/order-lifecycle");
+    await checkAndCompleteOrderIfEligible(item.order.id);
+
+    return { alreadyDelivered: false };
+  });
+

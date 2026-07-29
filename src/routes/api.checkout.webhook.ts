@@ -5,8 +5,11 @@ import { verifyWebhookSignature, getMidtransTransactionStatus } from "@/lib/midt
 import {
   sendEmailSellerNewOrder,
   notifySellerWhatsAppNewOrder,
+  alertAdminPayoutFailed,
 } from "@/lib/notifications";
 import { checkRateLimit, webhookLimiter } from "@/lib/ratelimit";
+import { renderDeliveryText } from "@/lib/digital-delivery";
+import { checkAndCompleteOrderIfEligible } from "@/lib/order-lifecycle";
 
 export const Route = createFileRoute("/api/checkout/webhook")({
   server: {
@@ -131,6 +134,76 @@ export const Route = createFileRoute("/api/checkout/webhook")({
           });
 
           if (updateResult.count === 1) {
+            // Fetch items with product config for stock + digital delivery
+            const itemsWithProduct = await prisma.orderItem.findMany({
+              where: { orderId: order.id },
+              include: {
+                product: {
+                  select: {
+                    isDigital: true,
+                    trackStock: true,
+                    digitalDeliveryType: true,
+                    digitalDeliveryText: true,
+                  },
+                },
+              },
+            });
+
+            // ── Stock: atomic conditional decrement ───────────────────────
+            const stockItems = itemsWithProduct.filter((i) => i.product?.trackStock && i.productId);
+            if (stockItems.length > 0) {
+              const decrementResults = await Promise.all(
+                stockItems.map((item) =>
+                  prisma.product.updateMany({
+                    where: { id: item.productId!, stock: { gte: item.qty } },
+                    data: { stock: { decrement: item.qty } },
+                  }),
+                ),
+              );
+              const oversold = decrementResults.some((r) => r.count === 0);
+              if (oversold) {
+                console.error(
+                  `[webhook] OVERSELL DETECTED for order ${order.orderCode} — admin alert fired`,
+                  { orderId: order.id },
+                );
+                void alertAdminPayoutFailed({
+                  orderCode: order.orderCode,
+                  tenantId: order.tenantId,
+                  amount: order.subtotal,
+                  failureReason: `OVERSELL: stok habis saat atomic decrement pada order ${order.orderCode}. Cek manual dan refund jika perlu.`,
+                });
+              }
+            }
+
+            // ── Digital: auto-deliver AUTO_TEXT items ──────────────────────
+            const autoTextItems = itemsWithProduct.filter(
+              (item) =>
+                item.product?.isDigital &&
+                item.product?.digitalDeliveryType === "AUTO_TEXT" &&
+                item.product?.digitalDeliveryText,
+            );
+
+            if (autoTextItems.length > 0) {
+              const deliveryNow = new Date();
+              await Promise.all(
+                autoTextItems.map((item) =>
+                  prisma.orderItem.update({
+                    where: { id: item.id },
+                    data: {
+                      deliveredAt: deliveryNow,
+                      digitalDeliverySnapshot: renderDeliveryText(item.product!.digitalDeliveryText!, {
+                        buyerName: order.buyerName,
+                        orderCode: order.orderCode,
+                      }),
+                    },
+                  }),
+                ),
+              );
+
+              // If pure-digital and all items now delivered → complete immediately
+              await checkAndCompleteOrderIfEligible(order.id);
+            }
+
             // Only the winning request fires notifications
             void sendEmailSellerNewOrder({
               sellerEmail: order.tenant.user.email,

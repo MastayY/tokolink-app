@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Product } from "@/lib/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -67,13 +67,34 @@ function Storefront() {
   const { tenant } = Route.useLoaderData();
   const [selecting, setSelecting] = useState<Product | null>(null);
   const [productPage, setProductPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Use seller-managed category order; fall back to product-derived if tenant has no managed categories
+  const categories: string[] =
+    tenant.categories && tenant.categories.length > 0
+      ? tenant.categories
+          .map((c) => c.name)
+          .filter((name) => tenant.products.some((p) => p.category === name))
+      : Array.from(
+          new Set(tenant.products.map((p) => p.category).filter(Boolean) as string[])
+        );
+
+  const filteredProducts = tenant.products.filter((p) => {
+    const matchesSearch = search === "" || p.name.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = selectedCategory === null || p.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setProductPage(1); }, [search, selectedCategory]);
 
   const PRODUCTS_PER_PAGE = 6;
-  const totalProducts = tenant.products.length;
+  const totalProducts = filteredProducts.length;
   const totalProductPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE) || 1;
-  const paginatedProducts = tenant.products.slice(
+  const paginatedProducts = filteredProducts.slice(
     (productPage - 1) * PRODUCTS_PER_PAGE,
-    productPage * PRODUCTS_PER_PAGE
+    productPage * PRODUCTS_PER_PAGE,
   );
 
   return (
@@ -112,7 +133,46 @@ function Storefront() {
 
       {/* Catalog */}
       <section className="mx-auto mt-16 max-w-2xl px-4">
-        <div className="mb-6 flex items-baseline justify-between px-2">
+        {/* Sticky search + category filter bar */}
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 pt-2 -mx-4 px-4">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari produk..."
+            className="w-full rounded-xl border border-border bg-secondary px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+          />
+
+          {categories.length > 0 && (
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                  selectedCategory === null
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border hover:border-foreground/50"
+                }`}
+              >
+                Semua
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                  className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    selectedCategory === cat
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border hover:border-foreground/50"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-6 mt-3 flex items-baseline justify-between px-2">
           <h2 className="font-display text-lg font-medium tracking-tight">Katalog</h2>
           <span className="text-xs text-muted-foreground">{totalProducts} produk</span>
         </div>

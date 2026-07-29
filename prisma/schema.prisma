@@ -53,12 +53,13 @@ model Tenant {
   bankAccountNumber     String?  @map("bank_account_number")
   bankAccountName       String?  @map("bank_account_name")
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products  Product[]
-  links     Link[]
-  orders    Order[]
-  payouts   Payout[]
-  reviews   Review[]
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products   Product[]
+  links      Link[]
+  orders     Order[]
+  payouts    Payout[]
+  reviews    Review[]
+  categories Category[]
 
   @@index([slug])
   @@map("tenants")
@@ -72,12 +73,19 @@ model Product {
   image       String   @default("")
   weightGrams Int      @default(500) @map("weight_grams")
   sortOrder   Int      @default(0) @map("sort_order")
+  isDigital            Boolean              @default(false) @map("is_digital")
+  trackStock           Boolean              @default(false) @map("track_stock")
+  stock                Int?                 @map("stock")
+  category             String?              @map("category")
+  digitalDeliveryType  DigitalDeliveryType? @map("digital_delivery_type")
+  digitalDeliveryText  String?              @map("digital_delivery_text")
   tenantId    String   @map("tenant_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   variantGroups ProductVariantGroup[]
+  orderItems    OrderItem[]
 
   @@index([tenantId])
   @@map("products")
@@ -110,6 +118,17 @@ model ProductVariantOption {
   @@map("product_variant_options")
 }
 
+model Category {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  sortOrder Int       @default(0) @map("sort_order")
+  tenantId  String    @map("tenant_id") @db.Uuid
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("categories")
+}
+
 model Link {
   id        String   @id @default(uuid()) @db.Uuid
   label     String
@@ -123,6 +142,11 @@ model Link {
 
   @@index([tenantId])
   @@map("links")
+}
+
+enum DigitalDeliveryType {
+  AUTO_TEXT
+  MANUAL
 }
 
 enum OrderStatus {
@@ -151,8 +175,8 @@ model Order {
   buyerName         String      @map("buyer_name")
   buyerPhone        String      @map("buyer_phone")
   shippingAddress   String      @map("shipping_address")
-  shippingAreaId    String      @map("shipping_area_id")
-  shippingAreaLabel String      @map("shipping_area_label")
+  shippingAreaId    String?     @map("shipping_area_id")
+  shippingAreaLabel String?     @map("shipping_area_label")
   subtotal          Int
   shippingCost      Int         @map("shipping_cost")
   platformFee       Int         @map("platform_fee")
@@ -184,18 +208,22 @@ model Order {
 }
 
 model OrderItem {
-  id            String  @id @default(uuid()) @db.Uuid
-  orderId       String  @map("order_id") @db.Uuid
-  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId     String  @map("product_id") @db.Uuid
-  variantId     String? @map("variant_id")
-  productName   String  @map("product_name")
-  variantName   String? @map("variant_name")
-  qty           Int
-  priceSnapshot Int     @map("price_snapshot")
-  weightGrams   Int     @map("weight_grams")
+  id                      String    @id @default(uuid()) @db.Uuid
+  orderId                 String    @map("order_id") @db.Uuid
+  order                   Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId               String?   @map("product_id") @db.Uuid
+  product                 Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variantId               String?   @map("variant_id")
+  productName             String    @map("product_name")
+  variantName             String?   @map("variant_name")
+  qty                     Int
+  priceSnapshot           Int       @map("price_snapshot")
+  weightGrams             Int       @map("weight_grams")
+  deliveredAt             DateTime? @map("delivered_at")
+  digitalDeliverySnapshot String?   @map("digital_delivery_snapshot")
 
   @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 

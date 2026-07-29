@@ -51,12 +51,18 @@ function DashboardLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // Sync loader data to Zustand store
+  // Sync loader data to Zustand store & fetch client-side if loader missed token
   useEffect(() => {
     if (loadedTenant) {
       setTenant(loadedTenant as any);
+    } else if (user && !useTenant.getState().tenant) {
+      getMyTenant({})
+        .then((t) => {
+          if (t) setTenant(t as any);
+        })
+        .catch((err) => console.error("Failed to fetch tenant client-side:", err));
     }
-  }, [loadedTenant, setTenant]);
+  }, [loadedTenant, user, setTenant]);
 
   // Close mobile sidebar on route change
   useEffect(() => {

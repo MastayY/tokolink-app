@@ -34,16 +34,34 @@ export const productVariantGroupSchema = z.object({
   options: z.array(productVariantOptionSchema).min(1, "Harus ada minimal 1 opsi varian"),
 });
 
-export const createProductSchema = z.object({
+export const baseProductSchema = z.object({
   name: z.string().min(1, "Nama produk harus diisi").max(100),
   description: z.string().max(500, "Deskripsi maksimal 500 karakter").default(""),
   basePrice: z.number().int().min(0, "Harga dasar tidak boleh negatif"),
   image: z.string().url("URL gambar tidak valid").or(z.literal("")).default(""),
-  weightGrams: z.number().int().min(1, "Berat minimal 1 gram").default(500),
+  weightGrams: z.number().int().min(0, "Berat tidak boleh negatif").default(500),
+  isDigital: z.boolean().default(false),
+  trackStock: z.boolean().default(false),
+  stock: z.number().int().min(0).nullable().optional(),
+  category: z.string().max(50).trim().nullable().optional(),
+  digitalDeliveryType: z.enum(["AUTO_TEXT", "MANUAL"]).nullable().optional(),
+  digitalDeliveryText: z.string().max(2000).nullable().optional(),
   variantGroups: z.array(productVariantGroupSchema).optional().default([]),
 });
 
-export const updateProductSchema = createProductSchema.partial();
+export const createProductSchema = baseProductSchema.superRefine((data, ctx) => {
+  if (data.isDigital && data.digitalDeliveryType === "AUTO_TEXT") {
+    if (!data.digitalDeliveryText?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Teks/link pengiriman wajib diisi untuk produk digital otomatis.",
+        path: ["digitalDeliveryText"],
+      });
+    }
+  }
+});
+
+export const updateProductSchema = baseProductSchema.partial();
 
 export const createLinkSchema = z.object({
   label: z.string().min(1, "Label harus diisi").max(50),
@@ -56,25 +74,25 @@ export const updateLinkSchema = createLinkSchema.partial();
 // ── Checkout / Shipping schemas ───────────────────────────────────────────────
 
 export const cartItemInputSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.string().uuid("ID produk tidak valid"),
   variantId: z.string().optional(),
-  name: z.string().min(1).max(100),
+  name: z.string().min(1, "Nama produk wajib diisi").max(100),
   variantName: z.string().optional(),
-  price: z.number().int().min(0),
-  qty: z.number().int().min(1).max(99),
-  weightGrams: z.number().int().min(1),
+  price: z.number().int().min(0, "Harga tidak boleh negatif"),
+  qty: z.number().int().min(1, "Jumlah produk minimal 1").max(99),
+  weightGrams: z.number().int().min(0).default(0),
 });
 
 export const checkoutBodySchema = z.object({
   tenantId: z.string().uuid(),
   buyerName: z.string().min(2, "Nama pembeli minimal 2 karakter").max(100),
-  buyerPhone: z.string().regex(/^62\d{9,15}$/, "Nomor WhatsApp harus diawali 62 (contoh: 628123456789)"),
-  shippingAddress: z.string().min(10, "Alamat pengiriman minimal 10 karakter").max(500, "Alamat pengiriman maksimal 500 karakter"),
-  shippingAreaId: z.string().min(1, "Kecamatan/kota pengiriman harus dipilih"),
-  shippingAreaLabel: z.string().min(1),
+  buyerPhone: z.string().regex(/^62\d{9,15}$/, "Nomor WhatsApp harus diawali 62"),
+  shippingAddress: z.string().max(500).optional(),
+  shippingAreaId: z.string().optional(),
+  shippingAreaLabel: z.string().optional(),
   shippingCost: z.number().int().min(0),
-  courierCompany: z.string().min(1, "Pilih opsi kurir pengiriman"),
-  courierType: z.string().min(1),
+  courierCompany: z.string().optional(),
+  courierType: z.string().optional(),
   cartItems: z.array(cartItemInputSchema).min(1, "Keranjang kosong"),
   note: z.string().max(300).optional(),
 });

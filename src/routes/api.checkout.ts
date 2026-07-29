@@ -127,13 +127,6 @@ export const Route = createFileRoute("/api/checkout")({
           return Response.json({ error: "Toko tidak ditemukan" }, { status: 404 });
         }
 
-        if (!tenant.shippingOriginAreaId) {
-          return Response.json(
-            { error: "Toko belum mengatur alamat asal pengiriman." },
-            { status: 422 }
-          );
-        }
-
         // ── SECURITY: Re-verify prices + weights from DB ──────────────────
         const productIds = [...new Set(cartItems.map((i) => i.productId))];
         const products = await prisma.product.findMany({
@@ -156,7 +149,7 @@ export const Route = createFileRoute("/api/checkout")({
           verifiedItems = cartItems.map((item) => {
             const product = products.find((p) => p.id === item.productId)!;
             let unitPrice = product.basePrice;
-            let weightGrams = product.weightGrams;
+            let weightGrams = product.isDigital ? 0 : product.weightGrams;
 
             if (item.variantId) {
               const option = product.variantGroups
@@ -175,30 +168,66 @@ export const Route = createFileRoute("/api/checkout")({
           return Response.json({ error: err.message ?? "Data produk tidak valid" }, { status: 422 });
         }
 
-        // ── SECURITY: Resolve shipping cost from server-side cache ─────────
-        const totalWeightGrams = verifiedItems.reduce((s, i) => s + i.weightGrams * i.qty, 0);
-        let serverShippingCost: number;
-        let shippingCostUpdated: boolean;
+        // ── Stock fast-fail (UX improvement — authoritative enforcement is in webhook) ─
+        for (const item of verifiedItems) {
+          const product = products.find((p) => p.id === item.productId)!;
+          if (product.trackStock && (product.stock ?? Infinity) < item.qty) {
+            return Response.json(
+              { error: `Stok "${product.name}" tidak mencukupi (tersisa ${product.stock ?? 0}).` },
+              { status: 409 },
+            );
+          }
+        }
 
-        try {
-          const resolved = await resolveShippingCost({
-            tenantId,
-            destinationAreaId: shippingAreaId,
-            totalWeightGrams,
-            courierCompany,
-            courierType,
-            originAreaId: tenant.shippingOriginAreaId,
-            cartItems: verifiedItems.map((i) => ({
-              name: i.name,
-              price: i.price,
-              weightGrams: i.weightGrams,
-              qty: i.qty,
-            })),
-          });
-          serverShippingCost = resolved.cost;
-          shippingCostUpdated = resolved.updatedFromServer;
-        } catch (err: any) {
-          return Response.json({ error: err.message ?? "Gagal memverifikasi tarif pengiriman" }, { status: 422 });
+        // ── Digital-only detection ─────────────────────────────────────────────────────
+        const hasPhysicalItem = verifiedItems.some((item) => {
+          const product = products.find((p) => p.id === item.productId)!;
+          return !product.isDigital;
+        });
+
+        if (hasPhysicalItem && !shippingAreaId) {
+          return Response.json(
+            { error: "Produk fisik dalam keranjang memerlukan data pengiriman." },
+            { status: 422 },
+          );
+        }
+
+        if (hasPhysicalItem && !tenant.shippingOriginAreaId) {
+          return Response.json(
+            { error: "Toko belum mengatur alamat asal pengiriman." },
+            { status: 422 },
+          );
+        }
+
+        // ── SECURITY: Resolve shipping cost from server-side cache ─────────
+        let serverShippingCost = 0;
+        let shippingCostUpdated = false;
+
+        if (hasPhysicalItem) {
+          const totalWeightGrams = verifiedItems.reduce((s, i) => s + i.weightGrams * i.qty, 0);
+          try {
+            const resolved = await resolveShippingCost({
+              tenantId,
+              destinationAreaId: shippingAreaId!,
+              totalWeightGrams,
+              courierCompany: courierCompany!,
+              courierType: courierType!,
+              originAreaId: tenant.shippingOriginAreaId!,
+              cartItems: verifiedItems.map((i) => ({
+                name: i.name,
+                price: i.price,
+                weightGrams: i.weightGrams,
+                qty: i.qty,
+              })),
+            });
+            serverShippingCost = resolved.cost;
+            shippingCostUpdated = resolved.updatedFromServer;
+          } catch (err: any) {
+            return Response.json(
+              { error: err.message ?? "Gagal memverifikasi tarif pengiriman" },
+              { status: 422 },
+            );
+          }
         }
 
         // Calculate financials using server-verified shipping cost
@@ -217,12 +246,14 @@ export const Route = createFileRoute("/api/checkout")({
             price: i.price,
             quantity: i.qty,
           })),
-          {
-            id: "SHIPPING",
-            name: `Ongkos Kirim (${courierCompany.toUpperCase()})`,
-            price: serverShippingCost,
-            quantity: 1,
-          },
+          ...(hasPhysicalItem && serverShippingCost > 0
+            ? [{
+                id: "SHIPPING",
+                name: `Ongkos Kirim (${(courierCompany ?? "KURIR").toUpperCase()})`,
+                price: serverShippingCost,
+                quantity: 1,
+              }]
+            : []),
         ];
 
         let order: Awaited<ReturnType<typeof prisma.order.create>>;
@@ -233,15 +264,15 @@ export const Route = createFileRoute("/api/checkout")({
               tenantId,
               buyerName,
               buyerPhone,
-              shippingAddress,
-              shippingAreaId,
-              shippingAreaLabel,
+              shippingAddress: shippingAddress ?? "",
+              shippingAreaId: shippingAreaId ?? null,
+              shippingAreaLabel: shippingAreaLabel ?? null,
               subtotal,
               shippingCost: serverShippingCost,  // server-authoritative, not client value
               platformFee,
               sellerPayout,
-              courierCompany,
-              courierType,
+              courierCompany: hasPhysicalItem ? (courierCompany ?? null) : null,
+              courierType: hasPhysicalItem ? (courierType ?? null) : null,
               note: note ?? null,
               items: {
                 create: verifiedItems.map((i) => ({

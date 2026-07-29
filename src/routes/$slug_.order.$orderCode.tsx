@@ -7,6 +7,22 @@ import { ReviewForm } from "@/components/storefront/review-form";
 import { Button } from "@/components/ui/button";
 import { formatIDR, normalizePhone } from "@/lib/utils";
 import { toast } from "sonner";
+import type { Order, OrderItem } from "@prisma/client";
+
+type DigitalDeliveryType = "AUTO_TEXT" | "MANUAL";
+
+type OrderItemWithDigital = OrderItem & {
+  product?: {
+    isDigital: boolean;
+    digitalDeliveryType: DigitalDeliveryType | null;
+  };
+};
+
+type OrderWithDigitalItems = Omit<Order, "items"> & {
+  items: OrderItemWithDigital[];
+  tenant?: { name: string; slug: string };
+  review?: { id: string } | null;
+};
 
 export const Route = createFileRoute("/$slug_/order/$orderCode")({
   head: () => ({
@@ -26,7 +42,7 @@ function OrderStatusPage() {
     sessionStorage.getItem(`order-phone-${orderCode}`) ?? ""
   );
   const [phoneInput, setPhoneInput] = useState("");
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<OrderWithDigitalItems | null>(null);
   const [loading, setLoading] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [confirmingReceipt, setConfirmingReceipt] = useState(false);
@@ -86,7 +102,6 @@ function OrderStatusPage() {
           <Button
             className="w-full"
             onClick={() => {
-              // Fix 3: normalize 08xxx / +62xxx → 62xxx before storing & querying
               const normalized = normalizePhone(phoneInput);
               sessionStorage.setItem(`order-phone-${orderCode}`, normalized);
               setPhone(normalized);
@@ -110,6 +125,9 @@ function OrderStatusPage() {
 
   if (!order) return null;
 
+  const hasPhysicalItem = order.items.some((i) => !i.product?.isDigital);
+  const hasDigitalItem = order.items.some((i) => i.product?.isDigital);
+
   return (
     <motion.main
       initial={{ opacity: 0, y: 12 }}
@@ -127,15 +145,52 @@ function OrderStatusPage() {
           </h1>
         </div>
 
-        <OrderStatusTimeline
-          status={order.status}
-          trackingNumber={order.trackingNumber}
-          courierCompany={order.courierCompany}
-        />
+        {/* Physical Shipping Timeline */}
+        {hasPhysicalItem && (
+          <OrderStatusTimeline
+            status={order.status}
+            trackingNumber={order.trackingNumber}
+            courierCompany={order.courierCompany}
+          />
+        )}
 
-        {/* Items */}
+        {/* Digital delivery section */}
+        {hasDigitalItem && (
+          <div className="rounded-2xl border border-border overflow-hidden">
+            <div className="px-4 py-3 border-b border-border bg-secondary/30">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Produk Digital
+              </p>
+            </div>
+            {order.items
+              .filter((i) => i.product?.isDigital)
+              .map((item) => (
+                <div key={item.id} className="px-4 py-3 border-b border-border last:border-0 space-y-2">
+                  <p className="text-sm font-medium">{item.productName}</p>
+                  {item.deliveredAt ? (
+                    <div className="rounded-xl bg-secondary/50 border border-border p-3">
+                      <p className="text-xs font-medium text-foreground mb-2">✓ Produk digital sudah dikirim</p>
+                      <p className="text-sm whitespace-pre-wrap text-foreground">
+                        {item.digitalDeliverySnapshot}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-border p-3">
+                      <p className="text-xs text-muted-foreground">
+                        {item.product?.digitalDeliveryType === "MANUAL"
+                          ? "Penjual sedang memproses pesanan digital ini."
+                          : "Menunggu pengiriman otomatis..."}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        )}
+
+        {/* Items list & Financial summary */}
         <div className="rounded-xl border border-border divide-y divide-border">
-          {order.items?.map((item: any) => (
+          {order.items.map((item) => (
             <div key={item.id} className="flex justify-between items-center px-4 py-3 text-sm">
               <div>
                 <p className="font-medium">{item.productName}</p>
@@ -147,18 +202,22 @@ function OrderStatusPage() {
               <p className="font-medium">{formatIDR(item.priceSnapshot * item.qty)}</p>
             </div>
           ))}
-          <div className="flex justify-between items-center px-4 py-3 text-sm">
-            <span className="text-muted-foreground">Ongkos Kirim ({order.courierCompany?.toUpperCase()})</span>
-            <span>{formatIDR(order.shippingCost)}</span>
-          </div>
+
+          {hasPhysicalItem && order.courierCompany && (
+            <div className="flex justify-between items-center px-4 py-3 text-sm">
+              <span className="text-muted-foreground">Ongkos Kirim ({order.courierCompany.toUpperCase()})</span>
+              <span>{formatIDR(order.shippingCost)}</span>
+            </div>
+          )}
+
           <div className="flex justify-between items-center px-4 py-3 font-semibold">
             <span>Total</span>
             <span>{formatIDR(order.subtotal + order.shippingCost)}</span>
           </div>
         </div>
 
-        {/* Confirm receipt button */}
-        {["SHIPPED", "DELIVERED"].includes(order.status) && (
+        {/* Confirm receipt button for physical items */}
+        {hasPhysicalItem && ["SHIPPED", "DELIVERED"].includes(order.status) && (
           <Button
             onClick={handleConfirmReceipt}
             disabled={confirmingReceipt}

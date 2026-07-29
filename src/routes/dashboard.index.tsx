@@ -35,8 +35,11 @@ function Overview() {
 
   if (!tenant) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Spinner size="md" />
+      <div className="space-y-10 text-foreground animate-fade-in pb-12">
+        <PageHeader label="Ringkasan Toko" title="Overview" />
+        <div className="flex items-center justify-center py-20">
+          <Spinner size="md" />
+        </div>
       </div>
     );
   }

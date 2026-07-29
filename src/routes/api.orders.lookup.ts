@@ -28,7 +28,16 @@ export const Route = createFileRoute("/api/orders/lookup")({
             buyerPhone: parsed.data.phone,
           },
           include: {
-            items: true,
+            items: {
+              include: {
+                product: {
+                  select: {
+                    isDigital: true,
+                    digitalDeliveryType: true,
+                  },
+                },
+              },
+            },
             review: { select: { id: true } },
             tenant: { select: { name: true, slug: true } },
           },

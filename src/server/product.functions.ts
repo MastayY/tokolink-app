@@ -50,6 +50,15 @@ export const createProduct = createServerFn({ method: "POST" })
         image: data.image || "",
         sortOrder: nextSortOrder,
         tenantId,
+        isDigital: data.isDigital ?? false,
+        trackStock: data.trackStock ?? false,
+        stock: data.trackStock ? (data.stock ?? null) : null,
+        category: data.category?.trim() || null,
+        digitalDeliveryType: data.isDigital ? (data.digitalDeliveryType ?? null) : null,
+        digitalDeliveryText:
+          data.isDigital && data.digitalDeliveryType === "AUTO_TEXT"
+            ? (data.digitalDeliveryText ?? null)
+            : null,
         variantGroups: {
           create: data.variantGroups?.map((group, groupIdx) => ({
             name: group.name,
@@ -118,6 +127,15 @@ export const updateProduct = createServerFn({ method: "POST" })
           basePrice: data.basePrice,
           weightGrams: data.weightGrams,
           image: data.image,
+          isDigital: data.isDigital,
+          trackStock: data.trackStock,
+          stock: data.trackStock === false ? null : data.stock,
+          category: data.category?.trim() ?? undefined,
+          digitalDeliveryType: data.isDigital === false ? null : data.digitalDeliveryType,
+          digitalDeliveryText:
+            data.isDigital && data.digitalDeliveryType === "AUTO_TEXT"
+              ? data.digitalDeliveryText
+              : null,
           variantGroups: data.variantGroups
             ? {
                 create: data.variantGroups.map((group, groupIdx) => ({

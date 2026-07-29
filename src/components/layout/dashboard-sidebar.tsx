@@ -170,23 +170,32 @@ export function DashboardSidebar({
         )}
 
         {/* View Store */}
-        <Link
-          to="/$slug"
-          params={{ slug: tenant?.slug || "" }}
-          target="_blank"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition duration-200"
-        >
-          <ExternalLink className="h-5 w-5 shrink-0" />
-          {(!isCollapsed || isMobile) && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="whitespace-nowrap"
-            >
-              Lihat toko
-            </motion.span>
-          )}
-        </Link>
+        {tenant?.slug ? (
+          <Link
+            to="/$slug"
+            params={{ slug: tenant.slug }}
+            target="_blank"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition duration-200"
+          >
+            <ExternalLink className="h-5 w-5 shrink-0" />
+            {(!isCollapsed || isMobile) && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="whitespace-nowrap"
+              >
+                Lihat Toko ↗
+              </motion.span>
+            )}
+          </Link>
+        ) : (
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground/50 cursor-not-allowed">
+            <ExternalLink className="h-5 w-5 shrink-0" />
+            {(!isCollapsed || isMobile) && (
+              <span className="whitespace-nowrap">Lihat Toko ↗</span>
+            )}
+          </div>
+        )}
 
         {/* Logout */}
         <button

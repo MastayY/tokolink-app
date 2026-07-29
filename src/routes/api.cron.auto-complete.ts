@@ -2,7 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { prisma } from "@/db";
 import { isValidCronSecret } from "@/lib/auth-utils";
-import { sendEmailSellerOrderCompleted } from "@/lib/notifications";
+import { markOrderCompleted } from "@/lib/order-lifecycle";
 
 const DAYS_BEFORE_AUTO_COMPLETE = 7;
 
@@ -16,76 +16,23 @@ export const Route = createFileRoute("/api/cron/auto-complete")({
 
         const cutoff = new Date(Date.now() - DAYS_BEFORE_AUTO_COMPLETE * 24 * 60 * 60 * 1000);
 
-        // Find orders that have been SHIPPED/DELIVERED for more than 7 days
         const staleOrders = await prisma.order.findMany({
           where: {
             status: { in: ["SHIPPED", "DELIVERED"] },
             shippedAt: { lte: cutoff },
           },
-          include: {
-            tenant: {
-              select: {
-                name: true,
-                bankCode: true,
-                bankAccountNumber: true,
-                bankAccountName: true,
-                user: { select: { email: true } },
-              },
-            },
-          },
+          select: { id: true },
         });
 
         let completed = 0;
         let errors = 0;
 
-        for (const order of staleOrders) {
+        for (const { id } of staleOrders) {
           try {
-            const now = new Date();
-            const paidAtPlusBuffer = order.paidAt
-              ? new Date(order.paidAt.getTime() + 3 * 24 * 60 * 60 * 1000)
-              : now;
-            const tomorrowFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-            const scheduledAt = paidAtPlusBuffer > tomorrowFromNow ? paidAtPlusBuffer : tomorrowFromNow;
-
-            const { tenant } = order;
-            await prisma.$transaction([
-              prisma.order.update({
-                where: { id: order.id },
-                data: { status: "COMPLETED", completedAt: now },
-              }),
-              ...(tenant?.bankCode && tenant?.bankAccountNumber && tenant?.bankAccountName
-                ? [
-                    prisma.payout.upsert({
-                      where: { orderId: order.id },
-                      create: {
-                        orderId: order.id,
-                        tenantId: order.tenantId,
-                        amount: order.sellerPayout,
-                        bankCode: tenant.bankCode,
-                        bankAccountNumber: tenant.bankAccountNumber,
-                        bankAccountName: tenant.bankAccountName,
-                        scheduledAt,
-                      },
-                      update: { scheduledAt },
-                    }),
-                  ]
-                : []),
-            ]);
-
-            // Notify seller that order was auto-completed (fire-and-forget)
-            if (tenant?.user?.email) {
-              void sendEmailSellerOrderCompleted({
-                sellerEmail: tenant.user.email,
-                sellerName: tenant.name,
-                orderCode: order.orderCode,
-                sellerPayout: order.sellerPayout,
-                autoCompleted: true,
-              });
-            }
-
+            await markOrderCompleted(id, { autoCompleted: true });
             completed++;
           } catch (err) {
-            console.error(`[cron/auto-complete] Failed for order ${order.id}:`, err);
+            console.error(`[cron/auto-complete] Failed for order ${id}:`, err);
             errors++;
           }
         }

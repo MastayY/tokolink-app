@@ -1,14 +1,21 @@
-// src/routes/dashboard.orders.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { getMyOrders } from "@/server/order.functions";
+import { RotateCw } from "lucide-react";
+import { getMyOrders, markDigitalItemDelivered } from "@/server/order.functions";
 import { OrderTable } from "@/components/dashboard/order-table";
 import { OrderDetailDrawer } from "@/components/dashboard/order-detail-drawer";
 import { toast } from "sonner";
-import type { Order, OrderItem } from "@prisma/client";
+import type { Order, OrderItem, Product } from "@prisma/client";
 
-type OrderWithItems = Order & { items: OrderItem[]; review: { id: string } | null };
+type OrderItemWithProduct = OrderItem & {
+  product: Pick<Product, "isDigital" | "digitalDeliveryType"> | null;
+};
+
+type OrderWithItems = Order & {
+  items: OrderItemWithProduct[];
+  review: { id: string } | null;
+};
 
 const STATUS_FILTER_OPTIONS = [
   { value: undefined, label: "Semua" },
@@ -36,10 +43,24 @@ function OrdersDashboardPage() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [shippingOrders, setShippingOrders] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const filtered = statusFilter
     ? orders.filter((o) => o.status === statusFilter)
     : orders;
+
+  async function handleRefresh() {
+    setIsRefreshing(true);
+    try {
+      const refreshed = await getMyOrders({ data: { page: 1 } });
+      setOrders(refreshed.orders as OrderWithItems[]);
+      toast.success("Daftar pesanan diperbarui");
+    } catch (e: any) {
+      toast.error(e.message ?? "Gagal memuat pesanan");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
 
   async function handleShipOrder(orderId: string) {
     setShippingOrders((prev) => new Set([...prev, orderId]));
@@ -58,6 +79,21 @@ function OrdersDashboardPage() {
     }
   }
 
+  async function handleMarkDelivered(orderItemId: string) {
+    try {
+      await markDigitalItemDelivered({ data: { orderItemId } });
+      toast.success("Item berhasil ditandai terkirim");
+      const refreshed = await getMyOrders({ data: { page: 1 } });
+      setOrders(refreshed.orders as OrderWithItems[]);
+      if (selectedOrder) {
+        const updated = (refreshed.orders as OrderWithItems[]).find((o) => o.id === selectedOrder.id);
+        if (updated) setSelectedOrder(updated);
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Gagal menandai item");
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -65,9 +101,19 @@ function OrdersDashboardPage() {
       transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}
       className="space-y-6"
     >
-      <div>
-        <h1 className="text-2xl font-display font-semibold">Pesanan Masuk</h1>
-        <p className="text-muted-foreground text-sm mt-1">{loaderData.total} pesanan total</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-semibold">Pesanan Masuk</h1>
+          <p className="text-muted-foreground text-sm mt-1">{loaderData.total} pesanan total</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-secondary transition disabled:opacity-50 cursor-pointer shadow-sm"
+        >
+          <RotateCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          <span>Refresh</span>
+        </button>
       </div>
 
       {/* Status filter tabs */}
@@ -97,6 +143,7 @@ function OrdersDashboardPage() {
       <OrderDetailDrawer
         order={selectedOrder}
         onClose={() => setSelectedOrder(null)}
+        onMarkDelivered={handleMarkDelivered}
       />
     </motion.div>
   );
