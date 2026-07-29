@@ -1,20 +1,19 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { useCart, buildWhatsAppUrl } from "@/lib/store";
+import { useCart } from "@/lib/store";
 import { formatIDR } from "@/lib/utils";
 import { FallbackImage } from "@/components/fallback-image";
-import { toast } from "sonner";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { useNavigate, useParams } from "@tanstack/react-router";
 
 interface FloatingCartProps {
   storeName: string;
   phone: string;
 }
 
-export function FloatingCart({ storeName, phone }: FloatingCartProps) {
+export function FloatingCart({ storeName }: FloatingCartProps) {
   const items = useCart((s) => s.items);
   const totalQty = useCart((s) => s.totalQty());
   const totalPrice = useCart((s) => s.totalPrice());
@@ -22,17 +21,21 @@ export function FloatingCart({ storeName, phone }: FloatingCartProps) {
   const dec = useCart((s) => s.dec);
   const clear = useCart((s) => s.clear);
   const [open, setOpen] = useState(false);
-  const [note, setNote] = useState("");
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigate = useNavigate();
+  const params = useParams({ strict: false });
+  const slug = (params as any).slug ?? "";
 
   if (totalQty === 0) return null;
 
-  const checkout = () => {
-    const url = buildWhatsAppUrl(phone, storeName, items, totalPrice, note);
-    window.open(url, "_blank");
-    toast.success("Mengarahkan ke WhatsApp...");
-    clear();
-    setNote("");
-    setOpen(false);
+  const handleCheckout = async () => {
+    setIsNavigating(true);
+    try {
+      await navigate({ to: "/$slug/checkout", params: { slug } });
+    } finally {
+      setIsNavigating(false);
+      setOpen(false);
+    }
   };
 
   return (
@@ -54,7 +57,7 @@ export function FloatingCart({ storeName, phone }: FloatingCartProps) {
         </span>
       </motion.button>
 
-      <Sheet open={open} onClose={() => setOpen(false)}>
+      <Sheet open={open} onClose={() => !isNavigating && setOpen(false)}>
         <h3 className="font-display text-2xl font-medium shrink-0">Keranjang</h3>
 
         <ul className="mt-4 divide-y divide-border overflow-y-auto flex-1 pr-1 hide-scrollbar">
@@ -76,14 +79,14 @@ export function FloatingCart({ storeName, phone }: FloatingCartProps) {
               <div className="flex items-center gap-2 text-sm shrink-0">
                 <button
                   onClick={() => dec(i.key)}
-                  className="h-7 w-7 rounded-full border border-border hover:bg-surface transition cursor-pointer"
+                  className="h-7 w-7 rounded-full border border-border hover:bg-surface transition cursor-pointer flex items-center justify-center"
                 >
                   −
                 </button>
                 <span className="w-4 text-center font-medium">{i.qty}</span>
                 <button
                   onClick={() => inc(i.key)}
-                  className="h-7 w-7 rounded-full border border-border hover:bg-surface transition cursor-pointer"
+                  className="h-7 w-7 rounded-full border border-border hover:bg-surface transition cursor-pointer flex items-center justify-center"
                 >
                   +
                 </button>
@@ -92,29 +95,25 @@ export function FloatingCart({ storeName, phone }: FloatingCartProps) {
           ))}
         </ul>
 
-        {/* Order Notes Field */}
-        <div className="mt-4 space-y-1.5 shrink-0">
-          <Label htmlFor="order-note">Catatan Pesanan (opsional)</Label>
-          <Textarea
-            id="order-note"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Contoh: Titip di pos satpam, request gilingan kasar, dll."
-            rows={2}
-          />
-        </div>
-
         <div className="mt-4 flex items-center justify-between border-t border-border pt-4 shrink-0">
           <span className="text-sm text-muted-foreground">Total</span>
           <span className="font-display text-2xl font-medium">{formatIDR(totalPrice)}</span>
         </div>
 
-        <Button onClick={checkout} variant="accent" className="mt-4 w-full shrink-0 py-4">
-          Checkout via WhatsApp →
+        <Button onClick={handleCheckout} disabled={isNavigating} variant="accent" className="mt-4 w-full shrink-0 py-4">
+          {isNavigating ? (
+            <span className="flex items-center justify-center gap-2">
+              <Spinner className="h-4 w-4" />
+              <span>Memuat checkout...</span>
+            </span>
+          ) : (
+            `Checkout →`
+          )}
         </Button>
         <button
           onClick={() => clear()}
-          className="mt-3 w-full text-xs text-muted-foreground hover:text-destructive transition shrink-0 cursor-pointer"
+          disabled={isNavigating}
+          className="mt-3 w-full text-xs text-muted-foreground hover:text-destructive transition shrink-0 cursor-pointer disabled:opacity-50"
         >
           Kosongkan keranjang
         </button>

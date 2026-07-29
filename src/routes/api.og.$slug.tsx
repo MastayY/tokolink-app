@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { prisma } from "../db";
 import fs from "node:fs";
 import path from "node:path";
+import { getAppUrl, getAppHost } from "@/lib/utils";
 
-const SITE_URL = "https://tokolink.app";
+const SITE_URL = getAppUrl();
 const FALLBACK_OG = `${SITE_URL}/og-main.png`;
 
 // Module-level font cache — loaded once per cold start
@@ -63,7 +64,7 @@ export function isSafeImageUrl(url: string | null | undefined): boolean {
     // Allow trusted CDNs and official site domains
     if (hostname.endsWith(".public.blob.vercel-storage.com")) return true;
     if (hostname === "api.dicebear.com") return true;
-    if (hostname === "tokolink.app") return true;
+    if (hostname === getAppHost()) return true;
 
     // Allow local development endpoints ONLY when not in production
     if (process.env.NODE_ENV !== "production") {
@@ -270,7 +271,7 @@ export const Route = createFileRoute("/api/og/$slug")({
                   }}
                 >
                   <span style={{ color: "#888", fontSize: "16px", display: "flex" }}>
-                    Powered by tokolink.app
+                    Powered by {getAppHost()}
                   </span>
                 </div>
 
@@ -285,7 +286,7 @@ export const Route = createFileRoute("/api/og/$slug")({
                     display: "flex",
                   }}
                 >
-                  tokolink.app/{tenant.slug}
+                  {getAppHost()}/{tenant.slug}
                 </div>
               </div>
             </div>
