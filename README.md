@@ -2,7 +2,7 @@
   <img src="public/favicon.svg" alt="Tokolink OSS Logo" width="120" height="120" />
   
   # Tokolink
-  **Platform All-in-One Link-in-Bio & Katalog UMKM Indonesia**
+  **The Open Source All-in-One Link-in-Bio & E-Commerce Platform for SMBs**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
@@ -15,154 +15,162 @@
 
 <br />
 
-**Tokolink** adalah platform Software-as-a-Service (SaaS) multi-tenant bersumber terbuka (Open Source) yang dirancang khusus untuk mempermudah digitalisasi Usaha Mikro, Kecil, dan Menengah (UMKM) di Indonesia. Platform ini menggabungkan kemudahan kartu nama digital (_link-in-bio_) dengan katalog produk interaktif, yang secara otomatis menerjemahkan keranjang pesanan pelanggan menjadi format pesan WhatsApp yang rapi dan terstruktur.
+**Tokolink** is a modern, high-performance open-source multi-tenant Software-as-a-Service (SaaS) platform designed to empower small-to-medium businesses (SMBs) and creator-merchants. It seamlessly combines the simplicity of a digital link-in-bio card with a full-featured storefront catalog, instant WhatsApp order notifications, automated digital product delivery, and real-time shipping rate verification.
 
 ---
 
-## Daftar Isi
+## Table of Contents
 
-- [Fitur Utama](#-fitur-utama)
-- [Arsitektur & Teknologi](#-arsitektur--teknologi)
-- [Prasyarat Sistem](#-prasyarat-sistem)
-- [Instalasi & Konfigurasi Lokal](#-instalasi--konfigurasi-lokal)
-- [Struktur Repositori](#-struktur-repositori)
-- [Deployment Produksi](#-deployment-produksi)
-- [Keamanan (Security Hardening)](#-keamanan-security-hardening)
-- [Kontribusi](#-kontribusi)
-- [Lisensi](#-lisensi)
-
----
-
-## Fitur Utama
-
-- **Instan Deploy & Onboarding:** Buat website toko fungsional (`tokolink.app/slug-toko`) dalam waktu singkat dengan alur onboarding yang intuitif.
-- **Hybrid Mobile-First Layout:** Tampilan storefront minimalis berbasis _continuous scroll_ yang menggabungkan link eksternal (sosial media) dan grid katalog produk dalam satu halaman.
-- **WhatsApp Order Generator:** Keranjang belanja _client-side_ terintegrasi yang menghitung total harga beserta pilihan varian, lalu mengonversinya menjadi format pesan WhatsApp terstruktur untuk memproses pemesanan.
-- **Dasbor & Manajemen Produk:** Kelola toko secara mandiri, atur data produk, harga dasar, deskripsi, foto produk, serta kelola varian dinamis (seperti pilihan ukuran atau warna) beserta selisih harga (_price delta_).
+- [Key Features](#-key-features)
+- [Architecture & Technology Stack](#-architecture--technology-stack)
+- [System Requirements](#-system-requirements)
+- [Local Installation & Setup](#-local-installation--setup)
+- [Project Directory Structure](#-project-directory-structure)
+- [Production Deployment](#-production-deployment)
+- [Security Hardening](#-security-hardening)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
-## Arsitektur & Teknologi
+## Key Features
 
-Tokolink dibangun menggunakan ekosistem modern berbasis JavaScript/TypeScript berkemampuan tinggi:
-
-- **Frontend:** React 19, TanStack Start (Vite + Vinxi compiler), Zustand (state management), Framer Motion (micro-animations), Tailwind CSS V4.
-- **Routing & SSR:** TanStack Router (file-based type-safe routing) dengan Server-Side Rendering (SSR).
-- **Backend Logic:** TanStack Start Server Functions (RPC endpoints) diproteksi dengan Same-Origin CSRF middleware.
-- **Database & ORM:** PostgreSQL dengan Prisma ORM untuk query relasional yang aman dan cepat.
-- **Layanan Pihak Ketiga:**
-  - **Supabase Auth**: Manajemen sesi login (Email OTP, Google OAuth).
-  - **Vercel Blob**: Penyimpanan media/gambar produk dan avatar toko secara awan.
-  - **Resend**: Layanan pengiriman email verifikasi OTP dan selamat datang.
-  - **Google reCAPTCHA v3**: Proteksi formulir pendaftaran dan onboarding dari spam bot.
+- **Instant Storefront & Onboarding:** Launch a full-featured, responsive merchant web app (`tokolink.app/store-slug`) in seconds via a streamlined onboarding flow.
+- **Hybrid Mobile-First Layout:** A sleek continuous-scroll storefront matching link-in-bio social links with interactive product catalog grids, complete with fluid micro-animations.
+- **Automated WhatsApp Order & Buyer Notifications:** Instant buyer & seller WhatsApp updates powered by Fonnte for payment confirmation, courier tracking numbers, order completion thank-you messages, and digital delivery.
+- **Instant Digital Product Delivery:** Full support for digital products with automated Instant Text (`AUTO_TEXT`) delivery upon payment verification, manual key fulfillment, and direct delivery over WhatsApp and customer order pages.
+- **Dynamic Category Management:** Flexible seller-managed category system supporting custom display order, inline renaming with automatic product association sync, and deletion safeguards.
+- **Server-Authoritative Shipping Verification:** Real-time Biteship courier integration with server-side price validation and Upstash Redis caching to eliminate client-side shipping cost tampering.
+- **Midtrans Payment Gateway & Automated Payouts:** Integrated payment processing with Midtrans Snap and automated seller payout scheduling via Iris Facilitator.
+- **Destructive Action Safety:** Custom confirmation modal prompts (`ConfirmModal`) across all dashboard destructive operations (deleting products, categories, links).
 
 ---
 
-## Prerequisites
+## Architecture & Technology Stack
 
-Sebelum memulai instalasi, pastikan sistem lokal Anda telah terpasang:
+Tokolink is built on top of the modern TypeScript web ecosystem:
 
-- [Bun Runtime](https://bun.sh/) (Sangat direkomendasikan untuk performa build cepat) atau Node.js v18+
-- Akun database PostgreSQL (atau database Supabase)
-- Kredensial API untuk Supabase, Resend, Vercel Blob, dan reCAPTCHA
+- **Frontend:** React 19, TanStack Start (Vite + Vinxi compiler), Zustand (state management), Framer Motion (micro-animations), Tailwind CSS v4.
+- **Routing & SSR:** TanStack Router (file-based type-safe routing) with Server-Side Rendering (SSR).
+- **Backend Logic:** TanStack Start Server Functions (RPC endpoints) protected by Same-Origin CSRF middleware.
+- **Database & ORM:** PostgreSQL with Prisma ORM for type-safe relational database management.
+- **Third-Party Services & APIs:**
+  - **Supabase Auth**: Secure authentication (Email OTP & Google OAuth).
+  - **Midtrans & Iris**: Payment gateway & automated disbursement payouts.
+  - **Biteship API**: Real-time Indonesian logistics courier rates & shipping booking.
+  - **Fonnte API**: WhatsApp notification automation for buyers and sellers.
+  - **Upstash Redis**: Serverless caching for shipping rate queries.
+  - **Vercel Blob**: Cloud media storage for product assets and merchant brand logos.
+  - **Resend**: Transactional email service for authentication OTPs & order alerts.
+  - **Google reCAPTCHA v3**: Bot protection for auth and onboarding routes.
 
 ---
 
-## Instalasi & Konfigurasi Lokal
+## System Requirements
 
-Ikuti langkah-langkah berikut untuk menjalankan proyek di komputer lokal Anda:
+Before starting local development, ensure your environment has:
 
-### 1. Kloning Repositori
+- [Bun Runtime](https://bun.sh/) (Recommended for ultra-fast builds) or Node.js v18+
+- PostgreSQL database instance (or Supabase Postgres)
+- API credentials for Supabase, Midtrans, Fonnte, Biteship, Upstash Redis, Resend, Vercel Blob, and reCAPTCHA.
+
+---
+
+## Local Installation & Setup
+
+Follow these steps to set up and run Tokolink on your local environment:
+
+### 1. Clone Repository
 
 ```bash
-git clone https://github.com/MastayY/tokolink-app
+git clone https://github.com/MastayY/tokolink-app.git
 cd tokolink
 ```
 
-### 2. Pasang Dependensi
+### 2. Install Dependencies
 
 ```bash
 bun install
-# atau
+# or
 npm install
 ```
 
-### 3. Konfigurasi Environment Variables
+### 3. Configure Environment Variables
 
-Salin template konfigurasi dan isi nilai variabel sesuai dengan akun layanan Anda:
+Copy the environment template and fill in your service credentials:
 
 ```bash
 cp .env.example .env
 ```
 
-Sesuaikan isi `.env` dengan kredensial PostgreSQL, Supabase, Vercel Blob, reCAPTCHA, dan Resend Anda.
+Ensure `.env` contains valid credentials for PostgreSQL (`DATABASE_URL`, `DIRECT_URL`), Supabase, Midtrans, Fonnte, Biteship, Upstash, and Resend.
 
-### 4. Sinkronisasi Skema Database
+### 4. Database Schema Synchronization
 
-Generate Prisma client dan jalankan migrasi database ke PostgreSQL:
+Generate the Prisma Client and push the schema to PostgreSQL:
 
 ```bash
 bun run db:generate
 bun run db:push
 ```
 
-### 5. Jalankan Server Pengembangan
+### 5. Run Development Server
 
 ```bash
 bun run dev
-# atau
+# or
 npm run dev
 ```
 
-Buka peramban (browser) dan akses aplikasi di alamat `http://localhost:3000`.
+Open your browser and navigate to `http://localhost:3000`.
 
 ---
 
-## Struktur Repositori
+## Project Directory Structure
 
 ```text
 tokolink/
-├── prisma/               # Skema database Prisma & file seeding
-├── public/               # File statis (logo, favicon, font lokal, OG assets)
+├── prisma/               # Prisma database schema & seeding scripts
+├── public/               # Static assets (logos, favicons, local fonts, OG media)
 ├── src/
-│   ├── components/       # Komponen UI presentasional (UI primitives & layout)
-│   ├── hooks/            # Custom React hooks (auth form, session sync)
-│   ├── lib/              # Konfigurasi klien, data stores, skema Zod, & utilitas
-│   ├── routes/           # Routing halaman & API endpoints (TanStack Router)
+│   ├── components/       # Presentational UI components (UI primitives, dashboard, storefront)
+│   ├── hooks/            # Custom React hooks (checkout, shipping rates, session sync)
+│   ├── lib/              # Client configs, Zustand stores, Zod schemas, utilities & notifications
+│   ├── routes/           # Page routes & API endpoints (TanStack Router)
 │   ├── server/           # TanStack Start Server Functions & middleware
-│   ├── styles.css        # Entrypoint css global Tailwind CSS
-│   ├── start.ts          # Konfigurasi middleware TanStack Start (CSRF & Error)
-│   └── server.ts         # Entrypoint server runtime (Vinxi/Nitro)
-├── .env.example          # Template konfigurasi environment variables
-└── README.md             # Dokumentasi proyek
+│   ├── styles.css        # Global CSS entrypoint (Tailwind CSS)
+│   └── start.ts          # TanStack Start middleware setup (CSRF & Error Handling)
+├── .env.example          # Environment variables template
+└── README.md             # Project documentation
 ```
 
 ---
 
-## Keamanan (Security Hardening)
+## Security Hardening
 
-Platform ini mengimplementasikan best-practice keamanan modern untuk menjaga data pengguna dan performa server:
+Tokolink incorporates production-grade security standards to protect merchant data and server integrity:
 
-- **Perlindungan CSRF:** Setiap RPC request ke server functions diproteksi secara otomatis melalui middleware CSRF bawaan TanStack Start.
-- **Pencegahan SSRF:** Modul pembuatan OG Image membatasi tautan eksternal gambar hanya dari host yang terpercaya (`*.vercel-storage.com`, `api.dicebear.com`, `tokolink.app`). Permintaan ke local network/loopback IP diblokir di lingkungan produksi.
-- **Validasi Tipe & Skema:** Seluruh parameter input dari client divalidasi ketat menggunakan pustaka **Zod** sebelum dieksekusi di database.
-- **Verifikasi Magic Bytes Gambar:** Server-side upload memverifikasi struktur biner gambar (PNG, JPG, GIF, WEBP) untuk menghindari manipulasi berkas biner berbahaya.
-- **Proteksi Brute-Force OTP:** Sistem verifikasi kode OTP membatasi percobaan salah maksimal 5 kali sebelum berkas OTP otomatis dihapus dari database.
-
----
-
-## Kontribusi
-
-Kontribusi dari seluruh developer sangat diapresiasi!
-
-1. Lakukan _Fork_ repositori ini.
-2. Buat branch fitur baru (`git checkout -b feature/NamaFitur`).
-3. Lakukan commit perubahan (`git commit -m 'feat: menambahkan fitur X'`).
-4. Push ke branch Anda (`git push origin feature/NamaFitur`).
-5. Ajukan _Pull Request_ (PR).
+- **CSRF Protection:** Every server function call is automatically protected via TanStack Start Same-Origin CSRF validation.
+- **Server-Authoritative Pricing & Shipping:** Order totals and shipping costs are independently calculated and verified server-side against database records and cached Biteship rate data to prevent client-side manipulation.
+- **HMAC Signature & Dual-Layer Webhook Verification:** Midtrans webhooks undergo HMAC-SHA512 signature validation and secondary status queries to Midtrans REST API.
+- **SSRF Prevention:** Dynamic OG Image generation restricts image URL fetching strictly to trusted CDNs (`*.vercel-storage.com`, `api.dicebear.com`, `tokolink.app`). Local/loopback IP requests are blocked in production.
+- **Type & Input Sanitization:** All payload parameters are strictly validated using **Zod** before executing database queries.
+- **Image Binary Magic Bytes Verification:** Image upload handlers inspect binary header magic bytes (PNG, JPG, GIF, WEBP) to prevent malicious executable uploads.
 
 ---
 
-## Lisensi
+## Contributing
 
-Proyek ini dirilis di bawah lisensi **MIT License**. Anda bebas menggunakan, memodifikasi, dan mendistribusikannya baik secara komersial maupun privat. Rincian lebih lengkap terdapat pada berkas `LICENSE`.
+Contributions from the developer community are warmly welcome!
+
+1. Fork this repository.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'feat: Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request (PR).
+
+---
+
+## License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
