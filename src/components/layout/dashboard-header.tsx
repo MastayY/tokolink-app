@@ -23,13 +23,20 @@ export function DashboardHeader({ setIsMobileOpen, tenant }: DashboardHeaderProp
           {tenant?.slug || ""}
         </span>
       </div>
-      <Link
-        to="/$slug"
-        params={{ slug: tenant?.slug || "" }}
-        className="rounded-full border border-border px-4 py-2 text-xs font-medium hover:bg-surface transition"
-      >
-        Toko ↗
-      </Link>
+      {tenant?.slug ? (
+        <Link
+          to="/$slug"
+          params={{ slug: tenant.slug }}
+          target="_blank"
+          className="rounded-full border border-border px-4 py-2 text-xs font-medium hover:bg-surface transition"
+        >
+          Toko ↗
+        </Link>
+      ) : (
+        <span className="rounded-full border border-border px-4 py-2 text-xs font-medium text-muted-foreground opacity-50">
+          Toko ↗
+        </span>
+      )}
     </header>
   );
 }

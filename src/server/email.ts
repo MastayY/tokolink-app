@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { getAppUrl } from "@/lib/utils";
 
 const resendApiKey = process.env.RESEND_API_KEY || "";
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -253,7 +254,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
           </div>
 
           <div class="btn-wrapper">
-            <a href="https://tokolink.app/dashboard" class="btn">Mulai Kelola Toko</a>
+            <a href="${getAppUrl()}/dashboard" class="btn">Mulai Kelola Toko</a>
           </div>
 
           <p>Jika Anda memiliki pertanyaan atau butuh bantuan dalam mengatur toko Anda, silakan hubungi tim dukungan kami.</p>
@@ -281,7 +282,7 @@ Langkah Selanjutnya:
 3. Atur nomor WhatsApp untuk menerima pesanan/checkout langsung.
 4. Bagikan link Tokolink Anda di bio Instagram, TikTok, atau WhatsApp!
 
-Akses dashboard Anda di: https://tokolink.app/dashboard
+Akses dashboard Anda di: ${getAppUrl()}/dashboard
 
 Jika Anda memiliki pertanyaan, jangan ragu untuk membalas email ini.
 

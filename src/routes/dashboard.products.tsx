@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { ProductForm } from "@/components/dashboard/product-form";
 import { ProductCard } from "@/components/dashboard/product-card";
 import { DeleteConfirmModal } from "@/components/dashboard/delete-confirm-modal";
+import { CategoryManager } from "@/components/dashboard/category-manager";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -25,8 +26,11 @@ function ProductsPage() {
 
   if (!tenant) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Spinner size="md" />
+      <div className="space-y-8 bg-background text-foreground animate-fade-in">
+        <PageHeader label="Manajemen" title="Produk" />
+        <div className="flex items-center justify-center py-20">
+          <Spinner size="md" />
+        </div>
       </div>
     );
   }
@@ -45,37 +49,61 @@ function ProductsPage() {
   );
 
   return (
-    <div className="space-y-10 bg-background text-foreground animate-fade-in">
+    <div className="space-y-8 bg-background text-foreground animate-fade-in">
       <PageHeader label="Manajemen" title="Produk" action={headerAction} />
 
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((p) => (
-          <ProductCard
-            key={p.id}
-            product={p}
-            onEdit={() => {
-              setEditing(p);
-              setShowForm(true);
-            }}
-            onDelete={() => setDeletingProduct(p)}
-          />
-        ))}
-      </ul>
+      {/* ── Category Manager ─────────────────────────────────── */}
+      <CategoryManager />
+
+      {/* ── Product List ─────────────────────────────────────── */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Daftar Produk
+        </h3>
+
+        {products.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              Belum ada produk. Klik{" "}
+              <span className="font-medium text-foreground">+ Produk baru</span>{" "}
+              untuk menambahkan.
+            </p>
+          </div>
+        ) : (
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {products.map((p) => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                onEdit={() => {
+                  setEditing(p);
+                  setShowForm(true);
+                }}
+                onDelete={() => setDeletingProduct(p)}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
 
       <AnimatePresence>
         {showForm && (
           <ProductForm
             initial={editing}
             onClose={() => setShowForm(false)}
-            onSubmit={(data) => {
-              if (editing) {
-                useTenant.getState().updateProduct(editing.id, data);
-                toast.success(`Produk "${data.name}" berhasil diperbarui`);
-              } else {
-                add(data);
-                toast.success(`Produk "${data.name}" berhasil ditambahkan`);
+            onSubmit={async (data) => {
+              try {
+                if (editing) {
+                  await useTenant.getState().updateProduct(editing.id, data);
+                  toast.success(`Produk "${data.name}" berhasil diperbarui`);
+                } else {
+                  await add(data);
+                  toast.success(`Produk "${data.name}" berhasil ditambahkan`);
+                }
+                setShowForm(false);
+              } catch (e: any) {
+                toast.error(e.message ?? "Gagal menyimpan produk");
               }
-              setShowForm(false);
             }}
           />
         )}
@@ -86,10 +114,14 @@ function ProductsPage() {
           <DeleteConfirmModal
             product={deletingProduct}
             onClose={() => setDeletingProduct(null)}
-            onConfirm={() => {
-              remove(deletingProduct.id);
-              toast.success(`Produk "${deletingProduct.name}" berhasil dihapus`);
-              setDeletingProduct(null);
+            onConfirm={async () => {
+              try {
+                await remove(deletingProduct.id);
+                toast.success(`Produk "${deletingProduct.name}" berhasil dihapus`);
+                setDeletingProduct(null);
+              } catch (e: any) {
+                toast.error(e.message ?? "Gagal menghapus produk");
+              }
             }}
           />
         )}

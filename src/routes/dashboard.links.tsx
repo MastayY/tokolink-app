@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { useTenant } from "@/lib/store";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
@@ -6,6 +7,9 @@ import { LinkForm } from "@/components/dashboard/link-form";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/dashboard/delete-confirm-modal";
+import { AnimatePresence } from "framer-motion";
+import type { LinkItem } from "@/lib/types";
 
 export const Route = createFileRoute("/dashboard/links")({
   component: LinksPage,
@@ -17,19 +21,28 @@ function LinksPage() {
   const update = useTenant((s) => s.updateLink);
   const remove = useTenant((s) => s.removeLink);
 
+  const [deletingLink, setDeletingLink] = useState<LinkItem | null>(null);
+
   if (!tenant) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Spinner size="md" />
+      <div className="space-y-10 bg-background text-foreground animate-fade-in">
+        <PageHeader label="Manajemen" title="Tautan" />
+        <div className="flex items-center justify-center py-20">
+          <Spinner size="md" />
+        </div>
       </div>
     );
   }
 
   const links = tenant.links;
 
-  const handleSave = (data: { label: string; url: string }) => {
-    add(data);
-    toast.success(`Tautan "${data.label}" berhasil ditambahkan`);
+  const handleSave = async (data: { label: string; url: string }) => {
+    try {
+      await add(data);
+      toast.success(`Tautan "${data.label}" berhasil ditambahkan`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Gagal menambahkan tautan");
+    }
   };
 
   return (
@@ -60,10 +73,7 @@ function LinksPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                remove(l.id);
-                toast.success(`Tautan "${l.label}" berhasil dihapus`);
-              }}
+              onClick={() => setDeletingLink(l)}
               className="text-xs text-muted-foreground hover:text-destructive shrink-0"
             >
               Hapus
@@ -71,6 +81,25 @@ function LinksPage() {
           </li>
         ))}
       </ul>
+
+      <AnimatePresence>
+        {deletingLink && (
+          <ConfirmModal
+            title="Hapus tautan?"
+            itemName={deletingLink.label}
+            onClose={() => setDeletingLink(null)}
+            onConfirm={async () => {
+              try {
+                await remove(deletingLink.id);
+                toast.success(`Tautan "${deletingLink.label}" berhasil dihapus`);
+                setDeletingLink(null);
+              } catch (e: any) {
+                toast.error(e.message ?? "Gagal menghapus tautan");
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

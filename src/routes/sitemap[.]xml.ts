@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { prisma } from "../db";
+import { getAppUrl } from "@/lib/utils";
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
@@ -17,15 +18,16 @@ export const Route = createFileRoute("/sitemap.xml")({
           console.error("Failed to fetch tenants for sitemap:", err);
         }
 
+        const appUrl = getAppUrl();
         const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://tokolink.app/</loc>
+    <loc>${appUrl}/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://tokolink.app/auth</loc>
+    <loc>${appUrl}/auth</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
@@ -33,7 +35,7 @@ export const Route = createFileRoute("/sitemap.xml")({
     .map(
       (tenant) => `
   <url>
-    <loc>https://tokolink.app/${tenant.slug}</loc>
+    <loc>${appUrl}/${tenant.slug}</loc>
     <lastmod>${tenant.updatedAt.toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>

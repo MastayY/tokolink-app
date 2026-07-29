@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import type { Product, ProductVariantGroup } from "@/lib/types";
+import { useTenant } from "@/lib/store";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -14,13 +15,23 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
+  const categories = useTenant((s) => s.tenant?.categories ?? []);
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [basePrice, setBasePrice] = useState(initial?.basePrice ?? 0);
+  const [weightGrams, setWeightGrams] = useState(initial?.weightGrams ?? 500);
   const [image, setImage] = useState(initial?.image ?? "");
   const [variantGroups, setVariantGroups] = useState<ProductVariantGroup[]>(
     initial?.variantGroups ?? [],
   );
+  const [isDigital, setIsDigital] = useState(initial?.isDigital ?? false);
+  const [trackStock, setTrackStock] = useState(initial?.trackStock ?? false);
+  const [stock, setStock] = useState<number | null>(initial?.stock ?? null);
+  const [category, setCategory] = useState(initial?.category ?? "");
+  const [digitalDeliveryType, setDigitalDeliveryType] = useState<"AUTO_TEXT" | "MANUAL" | null>(
+    initial?.digitalDeliveryType ?? null,
+  );
+  const [digitalDeliveryText, setDigitalDeliveryText] = useState(initial?.digitalDeliveryText ?? "");
 
   return (
     <div
@@ -57,8 +68,16 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
                 name,
                 description,
                 basePrice: Number(basePrice),
+                weightGrams: isDigital ? 0 : (Number(weightGrams) || 500),
                 image:
                   image || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80",
+                isDigital,
+                trackStock,
+                stock: trackStock ? (stock ?? null) : null,
+                category: category.trim() || null,
+                digitalDeliveryType: isDigital ? digitalDeliveryType : null,
+                digitalDeliveryText:
+                  isDigital && digitalDeliveryType === "AUTO_TEXT" ? digitalDeliveryText : null,
                 variantGroups: variantGroups.length > 0 ? variantGroups : undefined,
               });
             }}
@@ -82,6 +101,145 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
                 required
               />
             </Field>
+
+            {/* Category */}
+            <Field label="Kategori (opsional)">
+              {categories.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  Belum ada kategori. Tambahkan di bagian{" "}
+                  <span className="font-medium text-foreground">Kategori Produk</span>{" "}
+                  di atas.
+                </p>
+              ) : (
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 transition"
+                >
+                  <option value="">— Tidak ada kategori —</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+
+            {/* Digital product toggle */}
+            <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Produk Digital</p>
+                <p className="text-xs text-muted-foreground">Tidak perlu pengiriman fisik</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setIsDigital((v) => !v); if (isDigital) setDigitalDeliveryType(null); }}
+                className={`relative h-6 w-11 rounded-full transition-colors ${isDigital ? "bg-foreground" : "bg-border"}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform ${isDigital ? "translate-x-5" : "translate-x-0"}`} />
+              </button>
+            </div>
+
+            {isDigital && (
+              <div className="rounded-xl border border-border p-4 space-y-4">
+                <p className="text-sm font-medium">Cara pengiriman digital</p>
+                <div className="space-y-2">
+                  {[
+                    { value: "AUTO_TEXT" as const, label: "Otomatis (teks / link)", desc: "Pembeli langsung menerima teks setelah bayar" },
+                    { value: "MANUAL" as const, label: "Manual (jasa / custom)", desc: "Kamu tandai selesai dari dashboard" },
+                  ].map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${digitalDeliveryType === opt.value ? "border-foreground bg-secondary" : "border-border"}`}
+                    >
+                      <input
+                        type="radio"
+                        name="deliveryType"
+                        value={opt.value}
+                        checked={digitalDeliveryType === opt.value}
+                        onChange={() => setDigitalDeliveryType(opt.value)}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <p className="text-sm font-medium">{opt.label}</p>
+                        <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                {digitalDeliveryType === "AUTO_TEXT" && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Pesan / link yang dikirim ke pembeli</p>
+                    <Textarea
+                      value={digitalDeliveryText}
+                      onChange={(e) => setDigitalDeliveryText(e.target.value)}
+                      rows={4}
+                      placeholder={"Halo {{buyerName}}, terima kasih sudah membeli!\nDownload di sini: https://drive.google.com/... (Pesanan: {{orderCode}})"}
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Gunakan {"{{buyerName}}"} dan {"{{orderCode}}"} sebagai placeholder otomatis.
+                    </p>
+                  </div>
+                )}
+                {digitalDeliveryType === "MANUAL" && (
+                  <p className="text-xs text-muted-foreground">
+                    Kamu perlu klik "Tandai Terkirim" di dashboard setelah melayani pembeli.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!isDigital && (
+              <Field label="Berat Produk (gram)">
+                <Input
+                  type="number"
+                  min={1}
+                  value={weightGrams}
+                  onChange={(e) => setWeightGrams(+e.target.value || 500)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Digunakan untuk kalkulasi ongkos kirim. Default: 500g.
+                  {weightGrams === 500 && (
+                    <span className="text-amber-500 font-medium ml-1">⚠ Masih default — ubah jika perlu</span>
+                  )}
+                </p>
+              </Field>
+            )}
+
+            {/* Stock tracking — physical products and MANUAL digital */}
+            {(!isDigital || digitalDeliveryType === "MANUAL") && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium">Lacak Stok</p>
+                    <p className="text-xs text-muted-foreground">Checkout diblokir saat stok habis</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTrackStock((v) => !v)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${trackStock ? "bg-foreground" : "bg-border"}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform ${trackStock ? "translate-x-5" : "translate-x-0"}`} />
+                  </button>
+                </div>
+                {trackStock && (
+                  <Field label="Jumlah stok">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={stock ?? ""}
+                      onChange={(e) => setStock(e.target.value === "" ? null : Number(e.target.value))}
+                      placeholder="0"
+                    />
+                  </Field>
+                )}
+              </div>
+            )}
+
             <Field label="Gambar Produk">
               <ImageUpload value={image} onChange={(url) => setImage(url)} />
             </Field>
@@ -148,7 +306,7 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
                     {/* Options inside this group */}
                     <div className="pl-4 border-l-2 border-border space-y-2">
                       <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground block mb-2">
-                        Pilihan & Harga Ekstra
+                        Pilihan, Harga Ekstra & Berat Override
                       </span>
 
                       {group.options?.map((option, optionIdx) => (
@@ -177,7 +335,23 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
                               setVariantGroups(copy);
                             }}
                             placeholder="+Harga (Rp)"
-                            className="w-32 shrink-0"
+                            className="w-28 shrink-0"
+                          />
+                          <Input
+                            type="number"
+                            value={option.weightGrams ?? ""}
+                            onChange={(e) => {
+                              const copy = [...variantGroups];
+                              const opts = [...group.options];
+                              opts[optionIdx] = {
+                                ...option,
+                                weightGrams: e.target.value ? Number(e.target.value) : undefined,
+                              };
+                              copy[groupIdx] = { ...group, options: opts };
+                              setVariantGroups(copy);
+                            }}
+                            placeholder="Berat (g)"
+                            className="w-24 shrink-0"
                           />
                           <button
                             type="button"

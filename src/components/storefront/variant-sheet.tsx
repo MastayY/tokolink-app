@@ -45,6 +45,8 @@ export function VariantSheet({ product, onClose }: VariantSheetProps) {
       unitPrice: price,
       qty: 1,
       image: product.image,
+      isDigital: product.isDigital,
+      weightGrams: product.weightGrams,
     });
     toast.success(`"${product.name} (${optionNames})" ditambahkan ke keranjang`);
     onClose();

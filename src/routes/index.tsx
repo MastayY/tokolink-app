@@ -8,6 +8,7 @@ import { UsecasesSection } from "@/components/landing/usecases-section";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { FaqSection } from "@/components/landing/faq-section";
 import { CtaBanner } from "@/components/landing/cta-banner";
+import { getAppUrl } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,19 +25,19 @@ export const Route = createFileRoute("/")({
         content: "Link-in-bio + micro-catalog + WhatsApp checkout. Open source.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://tokolink.app" },
-      { property: "og:image", content: "https://tokolink.app/og-main.png" },
+      { property: "og:url", content: getAppUrl() },
+      { property: "og:image", content: `${getAppUrl()}/og-main.png` },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:image", content: "https://tokolink.app/og-main.png" },
+      { name: "twitter:image", content: `${getAppUrl()}/og-main.png` },
       { name: "twitter:title", content: "Tokolink — Storefront instan untuk UMKM" },
       {
         name: "twitter:description",
         content: "Bikin landing-page toko + katalog produk dengan checkout WhatsApp dalam 5 menit.",
       },
     ],
-    links: [{ rel: "canonical", href: "https://tokolink.app" }],
+    links: [{ rel: "canonical", href: getAppUrl() }],
   }),
   component: Landing,
 });
@@ -53,7 +54,7 @@ function Landing() {
             "Storefront instan untuk UMKM dengan integrasi link-in-bio dan checkout WhatsApp.",
           applicationCategory: "BusinessApplication",
           operatingSystem: "All",
-          url: "https://tokolink.app",
+          url: getAppUrl(),
           offers: {
             "@type": "Offer",
             price: "0",
