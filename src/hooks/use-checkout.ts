@@ -1,6 +1,8 @@
 // Handles full checkout submission + Snap.js payment invocation
 import { useState, useCallback } from "react";
+import { toast } from "sonner";
 import type { CartItem } from "@/lib/types";
+
 
 export interface CheckoutPayload {
   tenantId: string;
@@ -47,9 +49,18 @@ export function useCheckout() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Gagal membuat pesanan");
 
-        const { snapToken, orderCode: code } = data;
+        const { snapToken, orderCode: code, shippingCostUpdated, serverShippingCost } = data;
         setOrderCode(code);
+
+        if (shippingCostUpdated && serverShippingCost !== undefined) {
+          toast.warning(
+            `Tarif pengiriman diperbarui menjadi Rp${serverShippingCost.toLocaleString("id-ID")}. Harga lama sudah tidak berlaku.`,
+            { duration: 6000 }
+          );
+        }
+
         setStep("payment");
+
 
         // Invoke Midtrans Snap.js (loaded via script tag in checkout route head)
         (window as any).snap.pay(snapToken, {

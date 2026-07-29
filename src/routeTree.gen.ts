@@ -23,6 +23,7 @@ import { Route as DashboardOrdersRouteImport } from './routes/dashboard.orders'
 import { Route as DashboardLinksRouteImport } from './routes/dashboard.links'
 import { Route as DashboardEarningsRouteImport } from './routes/dashboard.earnings'
 import { Route as ApiReviewsRouteImport } from './routes/api.reviews'
+import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
 import { Route as SlugCheckoutRouteImport } from './routes/$slug_.checkout'
 import { Route as ApiShippingRatesRouteImport } from './routes/api.shipping.rates'
@@ -108,6 +109,11 @@ const ApiReviewsRoute = ApiReviewsRouteImport.update({
   path: '/api/reviews',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   id: '/api/checkout',
   path: '/api/checkout',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/$slug/checkout': typeof SlugCheckoutRoute
   '/api/checkout': typeof ApiCheckoutRouteWithChildren
+  '/api/health': typeof ApiHealthRoute
   '/api/reviews': typeof ApiReviewsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/links': typeof DashboardLinksRoute
@@ -219,6 +226,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/$slug/checkout': typeof SlugCheckoutRoute
   '/api/checkout': typeof ApiCheckoutRouteWithChildren
+  '/api/health': typeof ApiHealthRoute
   '/api/reviews': typeof ApiReviewsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/links': typeof DashboardLinksRoute
@@ -250,6 +258,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/$slug_/checkout': typeof SlugCheckoutRoute
   '/api/checkout': typeof ApiCheckoutRouteWithChildren
+  '/api/health': typeof ApiHealthRoute
   '/api/reviews': typeof ApiReviewsRoute
   '/dashboard/earnings': typeof DashboardEarningsRoute
   '/dashboard/links': typeof DashboardLinksRoute
@@ -282,6 +291,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/$slug/checkout'
     | '/api/checkout'
+    | '/api/health'
     | '/api/reviews'
     | '/dashboard/earnings'
     | '/dashboard/links'
@@ -311,6 +321,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/$slug/checkout'
     | '/api/checkout'
+    | '/api/health'
     | '/api/reviews'
     | '/dashboard/earnings'
     | '/dashboard/links'
@@ -341,6 +352,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/$slug_/checkout'
     | '/api/checkout'
+    | '/api/health'
     | '/api/reviews'
     | '/dashboard/earnings'
     | '/dashboard/links'
@@ -372,6 +384,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SlugCheckoutRoute: typeof SlugCheckoutRoute
   ApiCheckoutRoute: typeof ApiCheckoutRouteWithChildren
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiReviewsRoute: typeof ApiReviewsRoute
   SlugOrderOrderCodeRoute: typeof SlugOrderOrderCodeRoute
   ApiCronAutoCompleteRoute: typeof ApiCronAutoCompleteRoute
@@ -483,6 +496,13 @@ declare module '@tanstack/react-router' {
       path: '/api/reviews'
       fullPath: '/api/reviews'
       preLoaderRoute: typeof ApiReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/checkout': {
@@ -633,6 +653,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SlugCheckoutRoute: SlugCheckoutRoute,
   ApiCheckoutRoute: ApiCheckoutRouteWithChildren,
+  ApiHealthRoute: ApiHealthRoute,
   ApiReviewsRoute: ApiReviewsRoute,
   SlugOrderOrderCodeRoute: SlugOrderOrderCodeRoute,
   ApiCronAutoCompleteRoute: ApiCronAutoCompleteRoute,

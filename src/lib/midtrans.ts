@@ -106,3 +106,39 @@ export function verifyWebhookSignature(params: {
     .digest("hex");
   return params.signatureKey === expected;
 }
+
+/**
+ * Call Midtrans's own transaction-status endpoint to independently confirm
+ * a transaction's state. Use this AFTER verifyWebhookSignature passes to add
+ * a second, independent layer of verification.
+ *
+ * Midtrans API ref: GET /v2/{order_id}/status
+ * Returns the raw Midtrans status response. Throws on network/HTTP errors.
+ */
+export async function getMidtransTransactionStatus(orderId: string): Promise<{
+  transaction_status: string;
+  fraud_status?: string;
+  gross_amount: string;
+  status_code: string;
+}> {
+  const isProd = process.env.MIDTRANS_IS_PRODUCTION === "true";
+  const baseUrl = isProd
+    ? "https://api.midtrans.com"
+    : "https://api.sandbox.midtrans.com";
+  const serverKey = process.env.MIDTRANS_SERVER_KEY ?? "";
+  // Midtrans Basic Auth: base64(serverKey + ":") — note the trailing colon
+  const credentials = Buffer.from(`${serverKey}:`).toString("base64");
+
+  const res = await fetch(`${baseUrl}/v2/${encodeURIComponent(orderId)}/status`, {
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Midtrans status check failed: HTTP ${res.status} for order ${orderId}`);
+  }
+  return res.json();
+}
+

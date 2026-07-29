@@ -1,16 +1,21 @@
 // src/routes/api.checkout.webhook.ts
 import { createFileRoute } from "@tanstack/react-router";
 import { prisma } from "@/db";
-import { verifyWebhookSignature } from "@/lib/midtrans";
+import { verifyWebhookSignature, getMidtransTransactionStatus } from "@/lib/midtrans";
 import {
   sendEmailSellerNewOrder,
   notifySellerWhatsAppNewOrder,
 } from "@/lib/notifications";
+import { checkRateLimit, webhookLimiter } from "@/lib/ratelimit";
 
 export const Route = createFileRoute("/api/checkout/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // ── SECURITY: Rate limit ───────────────────────────────────────────
+        const limited = await checkRateLimit(webhookLimiter, request);
+        if (limited) return limited;
+
         let body: Record<string, string>;
         try {
           body = await request.json();
@@ -18,7 +23,7 @@ export const Route = createFileRoute("/api/checkout/webhook")({
           return Response.json({ error: "Invalid JSON" }, { status: 400 });
         }
 
-        // SECURITY: always verify HMAC-SHA512 signature
+        // ── SECURITY: Layer 1 — HMAC-SHA512 signature ─────────────────────
         const isValid = verifyWebhookSignature({
           orderId: body.order_id ?? "",
           statusCode: body.status_code ?? "",
@@ -47,7 +52,6 @@ export const Route = createFileRoute("/api/checkout/webhook")({
                 bankCode: true,
                 bankAccountNumber: true,
                 bankAccountName: true,
-                // email lives on User, not Tenant — fetch via relation
                 user: { select: { email: true } },
               },
             },
@@ -55,11 +59,10 @@ export const Route = createFileRoute("/api/checkout/webhook")({
         });
 
         if (!order) {
-          // Not our order (could be from a different system) — ack and ignore
+          // Not our order — ack and ignore
           return Response.json({ received: true });
         }
 
-        // Determine if payment is confirmed
         const isPaymentCapture =
           (transactionStatus === "capture" && fraudStatus === "accept") ||
           transactionStatus === "settlement";
@@ -69,15 +72,57 @@ export const Route = createFileRoute("/api/checkout/webhook")({
           transactionStatus === "cancel" ||
           transactionStatus === "expire";
 
-        // SECURITY: Atomic conditional update prevents double-notification race.
-        // If Midtrans sends the same webhook twice concurrently (they retry on slow ack),
-        // both could pass the `order.status === 'PENDING_PAYMENT'` guard read above.
-        // Solution: move the condition INTO the UPDATE so only ONE DB write wins.
-        // The db-level lock guarantees `count === 1` for exactly one request.
+        // ── SECURITY: Layer 2 — Independent Midtrans status API check ──────
+        // Only for payment-capture events. Denials are lower-risk and can be
+        // processed from the webhook payload alone.
         if (isPaymentCapture) {
+          let statusData: Awaited<ReturnType<typeof getMidtransTransactionStatus>>;
+          try {
+            statusData = await getMidtransTransactionStatus(orderCode);
+          } catch (err) {
+            console.error("[webhook] Midtrans status API call failed:", err);
+            // Return 200 to prevent Midtrans from retrying aggressively.
+            // Manual reconciliation handles persistent failures.
+            return Response.json({ received: true });
+          }
+
+          // Verify Midtrans's own systems confirm the transaction is paid
+          const midtransConfirmed =
+            statusData.status_code === "200" &&
+            (statusData.transaction_status === "settlement" ||
+              (statusData.transaction_status === "capture" &&
+                statusData.fraud_status === "accept"));
+
+          if (!midtransConfirmed) {
+            console.warn(
+              "[webhook] Midtrans status API disagrees with webhook payload.",
+              {
+                orderCode,
+                webhookStatus: transactionStatus,
+                apiStatus: statusData.transaction_status,
+              },
+            );
+            // Return 200 — do NOT mark as paid. Log for manual review.
+            return Response.json({ received: true });
+          }
+
+          // Verify gross_amount from Midtrans API matches our DB record
+          // Compare against DB (not webhook payload) — deepest check
+          const apiGrossAmount = Math.round(parseFloat(statusData.gross_amount));
+          const dbGrossAmount = order.subtotal + order.shippingCost;
+          if (apiGrossAmount !== dbGrossAmount) {
+            console.error(
+              "[webhook] AMOUNT MISMATCH — Midtrans API gross_amount differs from DB.",
+              { orderCode, apiGrossAmount, dbGrossAmount },
+            );
+            return Response.json({ received: true });
+          }
+
+          // ── Both layers passed — process payment ────────────────────────
+          // Atomic conditional update prevents double-notification on concurrent retries
           const now = new Date();
           const updateResult = await prisma.order.updateMany({
-            where: { id: order.id, status: "PENDING_PAYMENT" }, // condition is in the write
+            where: { id: order.id, status: "PENDING_PAYMENT" },
             data: {
               status: "PAID",
               paymentRef: body.transaction_id ?? null,
@@ -86,9 +131,9 @@ export const Route = createFileRoute("/api/checkout/webhook")({
           });
 
           if (updateResult.count === 1) {
-            // Only the winning request fires notifications — prevents double WA/email
+            // Only the winning request fires notifications
             void sendEmailSellerNewOrder({
-              sellerEmail: "", // Seller email from User model not available without extra join — skip for now
+              sellerEmail: order.tenant.user.email,
               sellerName: order.tenant.name,
               orderCode,
               buyerName: order.buyerName,
@@ -104,12 +149,11 @@ export const Route = createFileRoute("/api/checkout/webhook")({
               });
             }
           }
-          // count === 0 means a concurrent request already processed this — ack and return
         }
 
         if (isPaymentDenied) {
           await prisma.order.updateMany({
-            where: { id: order.id, status: "PENDING_PAYMENT" }, // also atomic
+            where: { id: order.id, status: "PENDING_PAYMENT" },
             data: { status: transactionStatus === "expire" ? "EXPIRED" : "CANCELLED" },
           });
         }

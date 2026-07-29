@@ -3,16 +3,84 @@ import { createFileRoute } from "@tanstack/react-router";
 import { prisma } from "@/db";
 import { checkoutBodySchema } from "@/lib/schemas";
 import { createSnapTransaction } from "@/lib/midtrans";
+import { getBiteshipRates, type BiteshipCourierRate } from "@/lib/biteship";
+import { checkRateLimit, checkoutLimiter, redis } from "@/lib/ratelimit";
+import { buildShippingCacheKey } from "./api.shipping.rates";
 import { randomBytes } from "crypto";
 
 function generateOrderCode(): string {
   return "TL-" + randomBytes(4).toString("hex").toUpperCase();
 }
 
+/** Resolve server-authoritative shipping cost from Upstash cache or Biteship fallback. */
+async function resolveShippingCost(params: {
+  tenantId: string;
+  destinationAreaId: string;
+  totalWeightGrams: number;
+  courierCompany: string;
+  courierType: string;
+  originAreaId: string;
+  cartItems: Array<{ name: string; price: number; weightGrams: number; qty: number }>;
+}): Promise<{ cost: number; updatedFromServer: boolean }> {
+  const cacheKey = buildShippingCacheKey(
+    params.tenantId,
+    params.destinationAreaId,
+    params.totalWeightGrams,
+  );
+
+  // Try cache first
+  const cached = await redis.get<string>(cacheKey);
+  if (cached) {
+    let rates: BiteshipCourierRate[];
+    try {
+      rates = typeof cached === "string" ? JSON.parse(cached) : (cached as unknown as BiteshipCourierRate[]);
+    } catch {
+      rates = [];
+    }
+    const match = rates.find(
+      (r) =>
+        r.courier_code === params.courierCompany &&
+        r.courier_service_code === params.courierType,
+    );
+    if (match) return { cost: match.price, updatedFromServer: false };
+  }
+
+  // Cache miss — re-fetch from Biteship server-side
+  const freshRates = await getBiteshipRates({
+    originAreaId: params.originAreaId,
+    destinationAreaId: params.destinationAreaId,
+    items: params.cartItems.map((i) => ({
+      name: i.name,
+      value: i.price,
+      weight: i.weightGrams,
+      quantity: i.qty,
+    })),
+  });
+
+  // Refresh cache for next call
+  void redis.set(cacheKey, JSON.stringify(freshRates), { ex: 900 });
+
+  const match = freshRates.find(
+    (r) =>
+      r.courier_code === params.courierCompany &&
+      r.courier_service_code === params.courierType,
+  );
+
+  if (!match) {
+    throw new Error("Opsi kurir tidak tersedia. Pilih ulang pengiriman.");
+  }
+
+  return { cost: match.price, updatedFromServer: true };
+}
+
 export const Route = createFileRoute("/api/checkout")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // ── SECURITY: Rate limit ───────────────────────────────────────────
+        const limited = await checkRateLimit(checkoutLimiter, request);
+        if (limited) return limited;
+
         let body: unknown;
         try {
           body = await request.json();
@@ -33,7 +101,7 @@ export const Route = createFileRoute("/api/checkout")({
           shippingAddress,
           shippingAreaId,
           shippingAreaLabel,
-          shippingCost,
+          // shippingCost from client is intentionally NOT used — server resolves it from cache
           courierCompany,
           courierType,
           cartItems,
@@ -66,15 +134,12 @@ export const Route = createFileRoute("/api/checkout")({
           );
         }
 
-        // ── SECURITY: Re-verify prices + weights from DB ─────────────────────
-        // NEVER trust client-supplied price. Anyone with DevTools can set price=1.
-        // We re-fetch actual Product.basePrice + variant priceDelta from DB here
-        // and REPLACE the client values entirely.
+        // ── SECURITY: Re-verify prices + weights from DB ──────────────────
         const productIds = [...new Set(cartItems.map((i) => i.productId))];
         const products = await prisma.product.findMany({
           where: {
             id: { in: productIds },
-            tenantId, // also enforces all items belong to THIS store (not another tenant's product)
+            tenantId,
           },
           include: { variantGroups: { include: { options: true } } },
         });
@@ -93,7 +158,6 @@ export const Route = createFileRoute("/api/checkout")({
             let unitPrice = product.basePrice;
             let weightGrams = product.weightGrams;
 
-            // If a variant is selected, add its priceDelta and use its weight override
             if (item.variantId) {
               const option = product.variantGroups
                 .flatMap((g) => g.options)
@@ -105,23 +169,47 @@ export const Route = createFileRoute("/api/checkout")({
               weightGrams = option.weightGrams ?? weightGrams;
             }
 
-            // Return item with server-verified price + weight; ignore client's values
             return { ...item, price: unitPrice, weightGrams };
           });
         } catch (err: any) {
           return Response.json({ error: err.message ?? "Data produk tidak valid" }, { status: 422 });
         }
 
-        // Calculate financials (all IDR integer) — using VERIFIED prices
+        // ── SECURITY: Resolve shipping cost from server-side cache ─────────
+        const totalWeightGrams = verifiedItems.reduce((s, i) => s + i.weightGrams * i.qty, 0);
+        let serverShippingCost: number;
+        let shippingCostUpdated: boolean;
+
+        try {
+          const resolved = await resolveShippingCost({
+            tenantId,
+            destinationAreaId: shippingAreaId,
+            totalWeightGrams,
+            courierCompany,
+            courierType,
+            originAreaId: tenant.shippingOriginAreaId,
+            cartItems: verifiedItems.map((i) => ({
+              name: i.name,
+              price: i.price,
+              weightGrams: i.weightGrams,
+              qty: i.qty,
+            })),
+          });
+          serverShippingCost = resolved.cost;
+          shippingCostUpdated = resolved.updatedFromServer;
+        } catch (err: any) {
+          return Response.json({ error: err.message ?? "Gagal memverifikasi tarif pengiriman" }, { status: 422 });
+        }
+
+        // Calculate financials using server-verified shipping cost
         const subtotal = verifiedItems.reduce((s, i) => s + i.price * i.qty, 0);
         const commissionPct = Number(process.env.PLATFORM_COMMISSION_PERCENT ?? "5");
         const platformFee = Math.round(subtotal * commissionPct / 100);
-        const sellerPayout = subtotal + shippingCost - platformFee;
-        const grossAmount = subtotal + shippingCost;
+        const sellerPayout = subtotal + serverShippingCost - platformFee;
+        const grossAmount = subtotal + serverShippingCost;
 
         const orderCode = generateOrderCode();
 
-        // Snap item list (product items + shipping line) — using VERIFIED prices
         const snapItems = [
           ...verifiedItems.map((i) => ({
             id: i.productId,
@@ -132,12 +220,11 @@ export const Route = createFileRoute("/api/checkout")({
           {
             id: "SHIPPING",
             name: `Ongkos Kirim (${courierCompany.toUpperCase()})`,
-            price: shippingCost,
+            price: serverShippingCost,
             quantity: 1,
           },
         ];
 
-        // SAFETY: Persist Order to DB FIRST (status PENDING_PAYMENT), then create Snap token.
         let order: Awaited<ReturnType<typeof prisma.order.create>>;
         try {
           order = await prisma.order.create({
@@ -150,7 +237,7 @@ export const Route = createFileRoute("/api/checkout")({
               shippingAreaId,
               shippingAreaLabel,
               subtotal,
-              shippingCost,
+              shippingCost: serverShippingCost,  // server-authoritative, not client value
               platformFee,
               sellerPayout,
               courierCompany,
@@ -163,8 +250,8 @@ export const Route = createFileRoute("/api/checkout")({
                   productName: i.name,
                   variantName: i.variantName ?? null,
                   qty: i.qty,
-                  priceSnapshot: i.price,   // server-verified price
-                  weightGrams: i.weightGrams, // server-verified weight
+                  priceSnapshot: i.price,
+                  weightGrams: i.weightGrams,
                 })),
               },
             },
@@ -174,11 +261,10 @@ export const Route = createFileRoute("/api/checkout")({
           return Response.json({ error: "Gagal membuat pesanan. Coba lagi." }, { status: 500 });
         }
 
-        // Create Snap transaction — DB row already exists, safe to fail here
         let snapResult: { token: string; redirect_url: string };
         try {
           snapResult = await createSnapTransaction({
-            orderId: orderCode, // Midtrans order_id = our orderCode
+            orderId: orderCode,
             grossAmount,
             buyerName,
             buyerPhone,
@@ -186,7 +272,6 @@ export const Route = createFileRoute("/api/checkout")({
           });
         } catch (err) {
           console.error("[api/checkout] Snap error:", err);
-          // Mark order CANCELLED so the row is not left dangling as PENDING_PAYMENT forever
           await prisma.order.update({
             where: { id: order.id },
             data: { status: "CANCELLED" },
@@ -197,7 +282,6 @@ export const Route = createFileRoute("/api/checkout")({
           );
         }
 
-        // Update order with the Snap token
         await prisma.order.update({
           where: { id: order.id },
           data: { paymentToken: snapResult.token },
@@ -207,6 +291,9 @@ export const Route = createFileRoute("/api/checkout")({
           orderId: order.id,
           orderCode: order.orderCode,
           snapToken: snapResult.token,
+          // Inform frontend if server updated the shipping price during cache miss
+          shippingCostUpdated,
+          serverShippingCost,
         });
       },
     },
