@@ -187,6 +187,6 @@ Tokolink is licensed under the **[GNU Affero General Public License v3.0 (AGPL-3
 **In plain English:**
 -  **Free & Open Source:** You are free to use, modify, run, and distribute Tokolink.
 -  **Network Copyleft:** If you modify Tokolink and run it as a network service/SaaS, you must make your modified source code available to your users under AGPL-3.0.
--  **Historical License:** Commits made prior to **2026-07-30** remain permanently under the MIT License. See [NOTICE.md](NOTICE.md) and [LICENSE-MIT-HISTORICAL.md](LICENSE-MIT-HISTORICAL.md) for full history details.
+-  **Historical License:** Commits up to commit [`19820bb61f7207b76b65c8c84c3a52e9568b995e`](https://github.com/MastayY/tokolink-app/commit/19820bb61f7207b76b65c8c84c3a52e9568b995e) (June 13, 2026) remain permanently under the MIT License. All subsequent commits are licensed under AGPL-3.0. See [NOTICE.md](NOTICE.md) and [LICENSE-MIT-HISTORICAL.md](LICENSE-MIT-HISTORICAL.md) for details.
 
 Copyright (c) 2026 [MastayY](https://github.com/MastayY)

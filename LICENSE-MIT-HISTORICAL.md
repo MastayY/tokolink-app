@@ -1,9 +1,8 @@
 # Historical MIT License
 
-> This license applied to all commits to the Tokolink repository **before 2026-07-30**.
-> On 2026-07-30, the project was relicensed to the GNU Affero General Public License v3.0 (AGPL-3.0).
-> Anyone who forked, cloned, or copied the code before that date retains full MIT rights
-> over that snapshot, permanently — that grant cannot be revoked.
+> This license applied to all commits to the Tokolink repository **up to commit `19820bb61f7207b76b65c8c84c3a52e9568b995e` (June 13, 2026)**.
+> All subsequent commits after commit `19820bb61f7207b76b65c8c84c3a52e9568b995e` are licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+> Anyone who forked, cloned, or copied the code at or before commit `19820bb61f7207b76b65c8c84c3a52e9568b995e` retains full MIT rights over that historical snapshot, permanently — that grant cannot be revoked.
 
 ---
 
