@@ -11,11 +11,13 @@ import { Button } from "@/components/ui/button";
 interface ProductFormProps {
   initial: Product | null;
   onClose: () => void;
-  onSubmit: (data: Omit<Product, "id">) => void;
+  onSubmit: (data: Omit<Product, "id">) => Promise<void> | void;
+  loading?: boolean;
 }
 
-export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
+export function ProductForm({ initial, onClose, onSubmit, loading: externalLoading = false }: ProductFormProps) {
   const categories = useTenant((s) => s.tenant?.categories ?? []);
+  const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [basePrice, setBasePrice] = useState(initial?.basePrice ?? 0);
@@ -33,10 +35,12 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
   );
   const [digitalDeliveryText, setDigitalDeliveryText] = useState(initial?.digitalDeliveryText ?? "");
 
+  const isFormLoading = submitting || externalLoading;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 backdrop-blur-sm sm:items-center p-4"
-      onClick={onClose}
+      onClick={isFormLoading ? undefined : onClose}
     >
       <motion.div
         initial={{ opacity: 0, y: 50, scale: 0.95 }}
@@ -53,7 +57,8 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
           </h2>
           <button
             onClick={onClose}
-            className="text-2xl text-muted-foreground hover:text-foreground transition cursor-pointer"
+            disabled={isFormLoading}
+            className="text-2xl text-muted-foreground hover:text-foreground transition cursor-pointer disabled:opacity-40"
           >
             ×
           </button>
@@ -62,24 +67,29 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
         {/* Scrollable Form Body Container */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5 min-h-0 hide-scrollbar">
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              onSubmit({
-                name,
-                description,
-                basePrice: Number(basePrice),
-                weightGrams: isDigital ? 0 : (Number(weightGrams) || 500),
-                image:
-                  image || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80",
-                isDigital,
-                trackStock,
-                stock: trackStock ? (stock ?? null) : null,
-                category: category.trim() || null,
-                digitalDeliveryType: isDigital ? digitalDeliveryType : null,
-                digitalDeliveryText:
-                  isDigital && digitalDeliveryType === "AUTO_TEXT" ? digitalDeliveryText : null,
-                variantGroups: variantGroups.length > 0 ? variantGroups : undefined,
-              });
+              setSubmitting(true);
+              try {
+                await onSubmit({
+                  name,
+                  description,
+                  basePrice: Number(basePrice),
+                  weightGrams: isDigital ? 0 : (Number(weightGrams) || 500),
+                  image:
+                    image || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80",
+                  isDigital,
+                  trackStock,
+                  stock: trackStock ? (stock ?? null) : null,
+                  category: category.trim() || null,
+                  digitalDeliveryType: isDigital ? digitalDeliveryType : null,
+                  digitalDeliveryText:
+                    isDigital && digitalDeliveryType === "AUTO_TEXT" ? digitalDeliveryText : null,
+                  variantGroups: variantGroups.length > 0 ? variantGroups : undefined,
+                });
+              } finally {
+                setSubmitting(false);
+              }
             }}
             className="space-y-5"
           >
@@ -389,8 +399,8 @@ export function ProductForm({ initial, onClose, onSubmit }: ProductFormProps) {
               </div>
             </div>
 
-            <Button type="submit" className="w-full shrink-0 py-3.5">
-              {initial ? "Simpan perubahan" : "Tambah produk"}
+            <Button type="submit" loading={isFormLoading} className="w-full shrink-0 py-3.5">
+              {isFormLoading ? "Memproses..." : initial ? "Simpan perubahan" : "Tambah produk"}
             </Button>
           </form>
         </div>

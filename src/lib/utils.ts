@@ -12,22 +12,78 @@ export const formatIDR = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-export function getErrorMessage(err: any): string {
-  if (!err) return "";
-  const msg = err.message || String(err);
-  try {
-    if (typeof msg === "string" && msg.trim().startsWith("[")) {
+export function getErrorMessage(err: any, fallback: string = "Terjadi kesalahan. Silakan coba lagi."): string {
+  if (!err) return fallback;
+
+  let msg = typeof err === "string" ? err : err?.message || err?.error || String(err);
+  if (!msg || typeof msg !== "string") return fallback;
+
+  // 1. Strip technical prefixes like "Error: ", "Uncaught (in promise) Error: "
+  msg = msg.replace(/^(Uncaught\s+)?(in\s+promise\s+)?Error:\s*/i, "").trim();
+
+  // 2. Handle Zod JSON validation error strings
+  if (msg.startsWith("[") && msg.endsWith("]")) {
+    try {
       const parsed = JSON.parse(msg);
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].message) {
-        const first = parsed[0];
-        const pathStr = first.path && first.path.length > 0 ? `${first.path.join(".")} - ` : "";
-        return `${pathStr}${first.message}`;
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.message) {
+        const msgs = parsed.map((item: any) => {
+          let field = item.path && item.path.length > 0 ? item.path[item.path.length - 1] : "";
+          let itemMsg = item.message || "";
+          if (itemMsg === "Required") itemMsg = "Wajib diisi";
+          if (itemMsg === "Invalid email") itemMsg = "Format email tidak valid";
+          return field ? `${field}: ${itemMsg}` : itemMsg;
+        });
+        return msgs.join(", ");
       }
+    } catch {
+      // ignore parse failure
     }
-  } catch (e) {
-    // Fail-safe to return original message
   }
-  return msg;
+
+  // 3. Handle Network & Fetch failures
+  if (
+    /failed to fetch|networkerror|fetch failed|econnrefused|etimedout|network request failed/i.test(
+      msg,
+    )
+  ) {
+    return "Gagal terhubung ke server. Periksa koneksi internet Anda.";
+  }
+
+  // 4. Handle HTTP 500 / 502 / 503 / 504 / Internal Server Errors
+  if (/500|502|503|504|internal server error|bad gateway|service unavailable/i.test(msg)) {
+    return "Terjadi kesalahan pada server. Silakan coba lagi nanti.";
+  }
+
+  // 5. Handle Payment Gateway / Midtrans / Iris / Biteship / API response errors
+  if (/midtrans|iris|biteship|access denied|http basic|http status code|api response/i.test(msg)) {
+    if (/401|access denied|unauthorized/i.test(msg)) {
+      return "Gagal memproses transfer (Kredensi payment gateway tidak valid).";
+    }
+    return "Gagal memproses transaksi dengan layanan pembayaran. Silakan coba beberapa saat lagi.";
+  }
+
+  // 6. Handle Prisma / Database technical errors
+  if (/prisma|p2002|p2025|p2003|unique constraint|foreign key|syntax error/i.test(msg)) {
+    if (/p2002|unique constraint/i.test(msg)) {
+      return "Data yang Anda masukkan sudah digunakan. Harap gunakan data lain.";
+    }
+    if (/p2025|record to update not found|record to delete not found/i.test(msg)) {
+      return "Data tidak ditemukan atau sudah dihapus.";
+    }
+    return "Terjadi kesalahan saat memproses data. Silakan coba lagi.";
+  }
+
+  // 6. Handle internal debug text or stack traces
+  if (/context\.tenant|authMiddleware|stack trace|at Object\.|at async/i.test(msg)) {
+    return "Sesi Anda telah berakhir atau terjadi kesalahan server. Harap muat ulang halaman.";
+  }
+
+  // 7. If the message is concise and clean (no raw code / JSON artifacts), return as-is
+  if (msg.length < 200 && !/[{}[\]\\]/.test(msg)) {
+    return msg;
+  }
+
+  return fallback;
 }
 
 /**

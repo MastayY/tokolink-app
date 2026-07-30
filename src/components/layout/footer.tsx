@@ -12,7 +12,7 @@ export function Footer() {
         </div>
         <div className="flex flex-wrap gap-8 text-sm">
           <a
-            href="https://github.com"
+            href="https://github.com/MastayY/tokolink-app"
             target="_blank"
             rel="noreferrer"
             className="text-muted-foreground hover:text-foreground"

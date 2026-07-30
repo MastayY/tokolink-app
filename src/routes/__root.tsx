@@ -123,15 +123,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
-  const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "";
-
   return (
     <html lang="id">
       <head>
         <HeadContent />
-        {siteKey && (
-          <script src={`https://www.google.com/recaptcha/api.js?render=${siteKey}`} async defer />
-        )}
       </head>
       <body>
         {children}

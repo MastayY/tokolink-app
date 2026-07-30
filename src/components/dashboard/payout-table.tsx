@@ -1,14 +1,14 @@
 // src/components/dashboard/payout-table.tsx
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR } from "@/lib/utils";
+import { formatIDR, getErrorMessage } from "@/lib/utils";
 import type { Payout, Order } from "@prisma/client";
 
 type PayoutWithOrder = Payout & { order: Pick<Order, "orderCode" | "buyerName" | "completedAt"> };
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
   SCHEDULED: { label: "Dijadwalkan", variant: "secondary" },
-  PROCESSING: { label: "Dipproses", variant: "default" },
+  PROCESSING: { label: "Diproses", variant: "default" },
   PAID: { label: "Dibayar", variant: "default" },
   FAILED: { label: "Gagal", variant: "destructive" },
 };
@@ -55,7 +55,9 @@ export function PayoutTable({ payouts }: PayoutTableProps) {
                 </p>
               )}
               {payout.failureReason && (
-                <p className="text-xs text-destructive">{payout.failureReason}</p>
+                <p className="text-xs text-destructive">
+                  {getErrorMessage(payout.failureReason, "Gagal memproses transfer")}
+                </p>
               )}
             </div>
             <p className="font-semibold text-sm">{formatIDR(payout.amount)}</p>

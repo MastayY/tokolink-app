@@ -35,8 +35,8 @@ export function FeaturesSection() {
             },
             {
               no: "/03",
-              title: "Magic WA Checkout",
-              copy: "Keranjang otomatis jadi pesan terstruktur ke WhatsApp. Tanpa payment gateway ribet.",
+              title: "Easy Checkout",
+              copy: "Keranjang otomatis masuk ke order manager. Semuanya otomatis.",
             },
           ].map((f, i) => (
             <motion.div

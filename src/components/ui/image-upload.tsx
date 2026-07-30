@@ -92,8 +92,12 @@ export function ImageUpload({ value, onChange, className = "" }: ImageUploadProp
     }
   };
 
-  const onButtonClick = () => {
-    inputRef.current?.click();
+  const onButtonClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!loading) {
+      inputRef.current?.click();
+    }
   };
 
   return (
@@ -103,6 +107,7 @@ export function ImageUpload({ value, onChange, className = "" }: ImageUploadProp
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
         onChange={handleFileChange}
+        onClick={(e) => e.stopPropagation()}
         className="hidden"
         disabled={loading}
       />
@@ -113,7 +118,7 @@ export function ImageUpload({ value, onChange, className = "" }: ImageUploadProp
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
         onDrop={handleDrop}
-        onClick={!loading ? onButtonClick : undefined}
+        onClick={onButtonClick}
         className={`relative flex flex-col items-center justify-center min-h-[160px] border-2 border-dashed rounded-3xl p-6 transition duration-200 cursor-pointer text-center select-none overflow-hidden group ${
           dragActive
             ? "border-accent bg-accent/5"

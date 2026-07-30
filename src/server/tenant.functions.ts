@@ -80,12 +80,12 @@ export const createTenant = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const userId = context.user.id;
 
-    // Verify reCAPTCHA
-    if (data.recaptchaToken) {
-      const { verifyRecaptcha } = await import("./recaptcha");
-      const isValid = await verifyRecaptcha(data.recaptchaToken, "onboarding");
+    // Verify Turnstile
+    if (data.turnstileToken) {
+      const { verifyTurnstile } = await import("./turnstile");
+      const isValid = await verifyTurnstile(data.turnstileToken);
       if (!isValid) {
-        throw new Error("Verifikasi reCAPTCHA gagal. Harap coba lagi.");
+        throw new Error("Verifikasi Turnstile gagal. Harap coba lagi.");
       }
     }
 

@@ -1,6 +1,6 @@
-// Handles full checkout submission + Snap.js payment invocation
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 import type { CartItem } from "@/lib/types";
 
 
@@ -85,7 +85,7 @@ export function useCheckout() {
         });
       } catch (e: any) {
         setStep("error");
-        setError(e.message ?? "Terjadi kesalahan");
+        setError(getErrorMessage(e, "Gagal membuat pesanan"));
       }
     },
     []

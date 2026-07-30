@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTenant } from "@/lib/store";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { LinkForm } from "@/components/dashboard/link-form";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ function LinksPage() {
   const remove = useTenant((s) => s.removeLink);
 
   const [deletingLink, setDeletingLink] = useState<LinkItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!tenant) {
     return (
@@ -41,7 +43,7 @@ function LinksPage() {
       await add(data);
       toast.success(`Tautan "${data.label}" berhasil ditambahkan`);
     } catch (e: any) {
-      toast.error(e.message ?? "Gagal menambahkan tautan");
+      toast.error(getErrorMessage(e, "Gagal menambahkan tautan"));
     }
   };
 
@@ -87,14 +89,18 @@ function LinksPage() {
           <ConfirmModal
             title="Hapus tautan?"
             itemName={deletingLink.label}
+            loading={isDeleting}
             onClose={() => setDeletingLink(null)}
             onConfirm={async () => {
+              setIsDeleting(true);
               try {
                 await remove(deletingLink.id);
                 toast.success(`Tautan "${deletingLink.label}" berhasil dihapus`);
                 setDeletingLink(null);
               } catch (e: any) {
-                toast.error(e.message ?? "Gagal menghapus tautan");
+                toast.error(getErrorMessage(e, "Gagal menghapus tautan"));
+              } finally {
+                setIsDeleting(false);
               }
             }}
           />

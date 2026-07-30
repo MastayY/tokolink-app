@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
-import { formatIDR, normalizePhone } from "@/lib/utils";
+import { formatIDR, normalizePhone, getErrorMessage } from "@/lib/utils";
 import type { BiteshipCourierRate } from "@/lib/biteship";
 
 interface CheckoutFormProps {
@@ -243,13 +243,14 @@ export function CheckoutForm({ tenantId, storeSlug }: CheckoutFormProps) {
           </div>
 
           {checkout.error && (
-            <p className="text-sm text-destructive">{checkout.error}</p>
+            <p className="text-sm text-destructive">{getErrorMessage(checkout.error)}</p>
           )}
 
           <Button
             type="submit"
             size="lg"
             className="w-full py-4 text-base font-medium shadow-sm cursor-pointer"
+            loading={isSubmitting}
             disabled={!canSubmit}
           >
             {isSubmitting ? "Memproses..." : `Bayar Sekarang`}

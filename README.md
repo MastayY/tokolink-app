@@ -1,11 +1,11 @@
 <div align="center">
-  <img src="public/favicon.svg" alt="Tokolink OSS Logo" width="120" height="120" />
-  
-  # Tokolink
-  **The Open Source All-in-One Link-in-Bio & E-Commerce Platform for SMBs**
+  <img src="public/favicon.svg" alt="Tokolink Logo" width="120" height="120" />
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+  # Tokolink
+  **Open Source Link-in-Bio & Micro-Catalogue Platform for Indonesian SMBs**
+
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=flat&logo=react)](https://react.dev/)
 [![TanStack Start](https://img.shields.io/badge/TanStack-Start-FF4154?style=flat)](https://tanstack.com/start)
 [![Supabase](https://img.shields.io/badge/Supabase-Auth-3ECF8E?style=flat&logo=supabase)](https://supabase.com/)
@@ -15,7 +15,7 @@
 
 <br />
 
-**Tokolink** is a modern, high-performance open-source multi-tenant Software-as-a-Service (SaaS) platform designed to empower small-to-medium businesses (SMBs) and creator-merchants. It seamlessly combines the simplicity of a digital link-in-bio card with a full-featured storefront catalog, instant WhatsApp order notifications, automated digital product delivery, and real-time shipping rate verification.
+**Tokolink** is a modern, high-performance open-source multi-tenant SaaS platform for small-to-medium businesses (SMBs) and creator-merchants. It combines a digital link-in-bio card with a full-featured storefront, integrated payment gateway, automated digital product delivery, and real-time shipping verification — all in one place.
 
 ---
 
@@ -26,7 +26,6 @@
 - [System Requirements](#-system-requirements)
 - [Local Installation & Setup](#-local-installation--setup)
 - [Project Directory Structure](#-project-directory-structure)
-- [Production Deployment](#-production-deployment)
 - [Security Hardening](#-security-hardening)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -42,7 +41,9 @@
 - **Dynamic Category Management:** Flexible seller-managed category system supporting custom display order, inline renaming with automatic product association sync, and deletion safeguards.
 - **Server-Authoritative Shipping Verification:** Real-time Biteship courier integration with server-side price validation and Upstash Redis caching to eliminate client-side shipping cost tampering.
 - **Midtrans Payment Gateway & Automated Payouts:** Integrated payment processing with Midtrans Snap and automated seller payout scheduling via Iris Facilitator.
-- **Destructive Action Safety:** Custom confirmation modal prompts (`ConfirmModal`) across all dashboard destructive operations (deleting products, categories, links).
+- **Cloudflare R2 Image Storage:** WebP-compressed product image uploads via Cloudflare R2, with unpredictable UUID-based object keys and zero egress fees.
+- **Cloudflare Turnstile Bot Protection:** Invisible bot protection on auth and onboarding routes via Cloudflare Turnstile (replaces reCAPTCHA v3).
+- **Destructive Action Safety:** Custom confirmation modal prompts across all dashboard destructive operations (deleting products, categories, links).
 
 ---
 
@@ -59,10 +60,10 @@ Tokolink is built on top of the modern TypeScript web ecosystem:
   - **Midtrans & Iris**: Payment gateway & automated disbursement payouts.
   - **Biteship API**: Real-time Indonesian logistics courier rates & shipping booking.
   - **Fonnte API**: WhatsApp notification automation for buyers and sellers.
-  - **Upstash Redis**: Serverless caching for shipping rate queries.
-  - **Vercel Blob**: Cloud media storage for product assets and merchant brand logos.
+  - **Upstash Redis**: Serverless caching for shipping rate queries and rate limiting.
+  - **Cloudflare R2**: S3-compatible cloud media storage with WebP compression via `sharp`.
+  - **Cloudflare Turnstile**: Privacy-respecting invisible bot protection.
   - **Resend**: Transactional email service for authentication OTPs & order alerts.
-  - **Google reCAPTCHA v3**: Bot protection for auth and onboarding routes.
 
 ---
 
@@ -70,44 +71,36 @@ Tokolink is built on top of the modern TypeScript web ecosystem:
 
 Before starting local development, ensure your environment has:
 
-- [Bun Runtime](https://bun.sh/) (Recommended for ultra-fast builds) or Node.js v18+
+- [Bun Runtime](https://bun.sh/) v1.x (recommended) or Node.js v18+
 - PostgreSQL database instance (or Supabase Postgres)
-- API credentials for Supabase, Midtrans, Fonnte, Biteship, Upstash Redis, Resend, Vercel Blob, and reCAPTCHA.
+- API credentials for all required services (see `.env.example`)
 
 ---
 
 ## Local Installation & Setup
 
-Follow these steps to set up and run Tokolink on your local environment:
-
 ### 1. Clone Repository
 
 ```bash
 git clone https://github.com/MastayY/tokolink-app.git
-cd tokolink
+cd tokolink-app
 ```
 
 ### 2. Install Dependencies
 
 ```bash
 bun install
-# or
-npm install
 ```
 
 ### 3. Configure Environment Variables
-
-Copy the environment template and fill in your service credentials:
 
 ```bash
 cp .env.example .env
 ```
 
-Ensure `.env` contains valid credentials for PostgreSQL (`DATABASE_URL`, `DIRECT_URL`), Supabase, Midtrans, Fonnte, Biteship, Upstash, and Resend.
+Open `.env` and fill in credentials for: PostgreSQL, Supabase, Midtrans, Fonnte, Biteship, Upstash, Cloudflare R2, Cloudflare Turnstile, and Resend.
 
 ### 4. Database Schema Synchronization
-
-Generate the Prisma Client and push the schema to PostgreSQL:
 
 ```bash
 bun run db:generate
@@ -118,11 +111,9 @@ bun run db:push
 
 ```bash
 bun run dev
-# or
-npm run dev
 ```
 
-Open your browser and navigate to `http://localhost:3000`.
+Open your browser at `http://localhost:3000`.
 
 ---
 
@@ -130,47 +121,72 @@ Open your browser and navigate to `http://localhost:3000`.
 
 ```text
 tokolink/
-├── prisma/               # Prisma database schema & seeding scripts
-├── public/               # Static assets (logos, favicons, local fonts, OG media)
+├── .github/
+│   ├── ISSUE_TEMPLATE/       # Bug report & feature request templates
+│   └── pull_request_template.md
+├── prisma/                   # Prisma schema & seed scripts
+├── public/                   # Static assets (logos, favicons, OG images)
 ├── src/
-│   ├── components/       # Presentational UI components (UI primitives, dashboard, storefront)
-│   ├── hooks/            # Custom React hooks (checkout, shipping rates, session sync)
-│   ├── lib/              # Client configs, Zustand stores, Zod schemas, utilities & notifications
-│   ├── routes/           # Page routes & API endpoints (TanStack Router)
-│   ├── server/           # TanStack Start Server Functions & middleware
-│   ├── styles.css        # Global CSS entrypoint (Tailwind CSS)
-│   └── start.ts          # TanStack Start middleware setup (CSRF & Error Handling)
-├── .env.example          # Environment variables template
-└── README.md             # Project documentation
+│   ├── components/           # UI components (primitives, dashboard, storefront)
+│   ├── hooks/                # Custom React hooks
+│   ├── lib/                  # Client configs, Zod schemas, Zustand stores, utils
+│   ├── routes/               # Page routes & API endpoints (TanStack Router)
+│   ├── server/               # Server functions & middleware
+│   ├── styles.css            # Global CSS entrypoint (Tailwind CSS v4)
+│   └── start.ts              # TanStack Start middleware (CSRF & error handling)
+├── .env.example              # Environment variables template
+├── CODE_OF_CONDUCT.md        # Community standards
+├── CONTRIBUTING.md           # Contributor guide
+├── LICENSE                   # GNU Affero General Public License v3.0 (AGPL-3.0)
+├── LICENSE-MIT-HISTORICAL.md # Pre-2026-07-30 historical MIT license
+├── NOTICE.md                 # Relicensing history notice
+├── SECURITY.md               # Vulnerability reporting policy
+└── README.md
 ```
 
 ---
 
 ## Security Hardening
 
-Tokolink incorporates production-grade security standards to protect merchant data and server integrity:
+Tokolink incorporates production-grade security standards:
 
 - **CSRF Protection:** Every server function call is automatically protected via TanStack Start Same-Origin CSRF validation.
-- **Server-Authoritative Pricing & Shipping:** Order totals and shipping costs are independently calculated and verified server-side against database records and cached Biteship rate data to prevent client-side manipulation.
+- **Server-Authoritative Pricing & Shipping:** Order totals and shipping costs are independently calculated and verified server-side to prevent client-side manipulation.
 - **HMAC Signature & Dual-Layer Webhook Verification:** Midtrans webhooks undergo HMAC-SHA512 signature validation and secondary status queries to Midtrans REST API.
-- **SSRF Prevention:** Dynamic OG Image generation restricts image URL fetching strictly to trusted CDNs (`*.vercel-storage.com`, `api.dicebear.com`, `tokolink.app`). Local/loopback IP requests are blocked in production.
+- **SSRF Prevention:** OG image generation restricts image URL fetching to trusted domains only (`R2_PUBLIC_URL`, `api.dicebear.com`, `tokolink.app`).
 - **Type & Input Sanitization:** All payload parameters are strictly validated using **Zod** before executing database queries.
-- **Image Binary Magic Bytes Verification:** Image upload handlers inspect binary header magic bytes (PNG, JPG, GIF, WEBP) to prevent malicious executable uploads.
+- **Image Binary Magic Bytes Verification:** Upload handlers inspect binary header magic bytes (PNG, JPG, GIF, WEBP) to prevent malicious file uploads.
+- **WebP Conversion & Unpredictable Storage Keys:** Images are compressed to WebP via `sharp` and stored with `crypto.randomUUID()` keys to prevent key enumeration.
+- **Cloudflare Turnstile:** Invisible bot protection on all auth and onboarding form submissions.
+- **Upstash Rate Limiting:** Redis-backed rate limiting on all public API routes.
 
 ---
 
 ## Contributing
 
-Contributions from the developer community are warmly welcome!
+Contributions are warmly welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a PR.
 
-1. Fork this repository.
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your changes (`git commit -m 'feat: Add some AmazingFeature'`).
-4. Push to the branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request (PR).
+Key points:
+- Open an Issue or Discussion before working on large changes
+- Follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages
+- Run `bun run build` to verify your changes before submitting
+- Check [SECURITY.md](SECURITY.md) for responsible vulnerability disclosure
+
+---
+
+## Acknowledgements & References
+
+- Cloudflare R2 storage integration and Cloudflare Turnstile bot protection implementation referenced from [@salmanabdurrahman](https://github.com/salmanabdurrahman).
 
 ---
 
 ## License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Tokolink is licensed under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)**.
+
+**In plain English:**
+-  **Free & Open Source:** You are free to use, modify, run, and distribute Tokolink.
+-  **Network Copyleft:** If you modify Tokolink and run it as a network service/SaaS, you must make your modified source code available to your users under AGPL-3.0.
+-  **Historical License:** Commits up to commit [`19820bb61f7207b76b65c8c84c3a52e9568b995e`](https://github.com/MastayY/tokolink-app/commit/19820bb61f7207b76b65c8c84c3a52e9568b995e) (June 13, 2026) remain permanently under the MIT License. All subsequent commits are licensed under AGPL-3.0. See [NOTICE.md](NOTICE.md) and [LICENSE-MIT-HISTORICAL.md](LICENSE-MIT-HISTORICAL.md) for details.
+
+Copyright (c) 2026 [MastayY](https://github.com/MastayY)

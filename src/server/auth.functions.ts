@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { prisma } from "../db";
 import { supabaseAdmin } from "../lib/supabase.server";
-import { verifyRecaptcha } from "./recaptcha";
+import { verifyTurnstile } from "./turnstile";
 import { sendVerificationEmail, sendWelcomeEmail } from "./email";
 import crypto from "crypto";
 import { z } from "zod";
@@ -102,7 +102,7 @@ export const syncSession = createServerFn({ method: "POST" })
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  recaptchaToken: z.string(),
+  turnstileToken: z.string().optional(),
 });
 
 const verifyCodeSchema = z.object({
@@ -112,7 +112,7 @@ const verifyCodeSchema = z.object({
 
 const resendSchema = z.object({
   email: z.string().email(),
-  recaptchaToken: z.string(),
+  turnstileToken: z.string().optional(),
 });
 
 // Helper to generate verification OTP
@@ -143,12 +143,12 @@ async function generateAndSendOTP(email: string) {
 export const registerUser = createServerFn({ method: "POST" })
   .validator(registerSchema)
   .handler(async ({ data }) => {
-    const { email, password, recaptchaToken } = data;
+    const { email, password, turnstileToken } = data;
 
-    // Verify reCAPTCHA v3
-    const isHuman = await verifyRecaptcha(recaptchaToken, "signup");
+    // Verify Turnstile
+    const isHuman = await verifyTurnstile(turnstileToken ?? "");
     if (!isHuman) {
-      throw new Error("Verifikasi bot gagal (reCAPTCHA)");
+      throw new Error("Verifikasi bot gagal (Turnstile)");
     }
 
     // Check if user exists in local database
@@ -278,11 +278,11 @@ export const verifySignUpCode = createServerFn({ method: "POST" })
 export const resendSignUpCode = createServerFn({ method: "POST" })
   .validator(resendSchema)
   .handler(async ({ data }) => {
-    const { email, recaptchaToken } = data;
+    const { email, turnstileToken } = data;
 
-    const isHuman = await verifyRecaptcha(recaptchaToken, "onboarding");
+    const isHuman = await verifyTurnstile(turnstileToken ?? "");
     if (!isHuman) {
-      throw new Error("Verifikasi bot gagal (reCAPTCHA)");
+      throw new Error("Verifikasi bot gagal (Turnstile)");
     }
 
     const user = await prisma.user.findUnique({

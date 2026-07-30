@@ -11,6 +11,7 @@ export function useAuthForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [cooldown, setCooldown] = useState(0);
@@ -44,12 +45,9 @@ export function useAuthForm() {
     setError("");
 
     try {
-      const { getRecaptchaToken } = await import("@/lib/recaptcha");
-      const recaptchaToken = await getRecaptchaToken(mode === "signup" ? "signup" : "login");
-
       if (mode === "signup") {
         const { registerUser } = await import("@/server/auth.functions");
-        const res = await registerUser({ data: { email, password, recaptchaToken } });
+        const res = await registerUser({ data: { email, password, turnstileToken } });
         if (res.success) {
           setMode("otp");
           setCooldown(60);
@@ -100,11 +98,8 @@ export function useAuthForm() {
     setError("");
 
     try {
-      const { getRecaptchaToken } = await import("@/lib/recaptcha");
-      const recaptchaToken = await getRecaptchaToken("onboarding");
-
       const { resendSignUpCode } = await import("@/server/auth.functions");
-      const res = await resendSignUpCode({ data: { email, recaptchaToken } });
+      const res = await resendSignUpCode({ data: { email, turnstileToken } });
 
       if (res.success) {
         setCooldown(60);
@@ -144,6 +139,8 @@ export function useAuthForm() {
     setPassword,
     code,
     setCode,
+    turnstileToken,
+    setTurnstileToken,
     loading,
     error,
     cooldown,
