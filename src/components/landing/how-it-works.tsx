@@ -25,7 +25,7 @@ export function HowItWorks() {
             {
               step: "01",
               title: "Daftar & klaim slug",
-              copy: "tokolink.app/nama-toko-kamu. Gratis, 30 detik.",
+              copy: "Klaim slug untuk tokomu.",
             },
             {
               step: "02",
@@ -35,7 +35,7 @@ export function HowItWorks() {
             {
               step: "03",
               title: "Bagikan & terima pesanan",
-              copy: "Sebar link di bio, terima pesanan WhatsApp otomatis.",
+              copy: "Sebar link di bio, terima pesanan otomatis.",
             },
           ].map((s, i) => (
             <motion.div key={s.step} {...fadeUp} transition={{ duration: 0.7, delay: i * 0.1 }}>

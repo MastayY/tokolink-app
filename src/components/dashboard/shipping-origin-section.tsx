@@ -1,4 +1,3 @@
-// src/components/dashboard/shipping-origin-section.tsx
 import { useState } from "react";
 import { AreaSearch } from "@/components/storefront/area-search";
 import { useAreaSearch } from "@/hooks/use-area-search";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { updateShippingOrigin } from "@/server/tenant.functions";
 import { useTenant } from "@/lib/store";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 
 export function ShippingOriginSection() {
   const tenant = useTenant((s) => s.tenant);
@@ -31,7 +31,7 @@ export function ShippingOriginSection() {
       setTenant({ ...tenant!, shippingOriginAreaId: selectedArea.id, shippingOriginLabel: selectedArea.label } as any);
       toast.success("Alamat asal pengiriman disimpan");
     } catch (e: any) {
-      toast.error(e.message ?? "Gagal menyimpan");
+      toast.error(getErrorMessage(e, "Gagal menyimpan alamat asal"));
     } finally {
       setSaving(false);
     }
@@ -62,7 +62,7 @@ export function ShippingOriginSection() {
         placeholder="Cari kecamatan atau kota..."
       />
 
-      <Button onClick={handleSave} disabled={!selectedArea || saving}>
+      <Button onClick={handleSave} loading={saving} disabled={!selectedArea || saving}>
         {saving ? "Menyimpan..." : "Simpan Alamat Asal"}
       </Button>
     </div>

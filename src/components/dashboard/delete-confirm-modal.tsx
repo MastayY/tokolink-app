@@ -35,7 +35,7 @@ export function ConfirmModal({
         <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>
           Batal
         </Button>
-        <Button variant="destructive" size="sm" onClick={onConfirm} disabled={loading}>
+        <Button variant="destructive" size="sm" onClick={onConfirm} loading={loading}>
           {loading ? "Menghapus..." : confirmLabel}
         </Button>
       </div>
@@ -45,10 +45,12 @@ export function ConfirmModal({
 
 export function DeleteConfirmModal({
   product,
+  loading = false,
   onClose,
   onConfirm,
 }: {
   product: { name: string };
+  loading?: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }) {
@@ -56,6 +58,7 @@ export function DeleteConfirmModal({
     <ConfirmModal
       title="Hapus produk?"
       itemName={product.name}
+      loading={loading}
       onClose={onClose}
       onConfirm={onConfirm}
     />

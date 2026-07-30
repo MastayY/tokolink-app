@@ -3,19 +3,25 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 interface LinkFormProps {
-  onSave: (data: { label: string; url: string }) => void;
+  onSave: (data: { label: string; url: string }) => Promise<void> | void;
 }
 
 export function LinkForm({ onSave }: LinkFormProps) {
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!label || !url) return;
-    onSave({ label, url });
-    setLabel("");
-    setUrl("");
+    setSubmitting(true);
+    try {
+      await onSave({ label, url });
+      setLabel("");
+      setUrl("");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -27,16 +33,18 @@ export function LinkForm({ onSave }: LinkFormProps) {
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         placeholder="Label (Instagram)"
+        disabled={submitting}
         required
       />
       <Input
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         placeholder="https://..."
+        disabled={submitting}
         required
         type="url"
       />
-      <Button type="submit" size="md" className="rounded-lg py-3">
+      <Button type="submit" size="md" loading={submitting} className="rounded-lg py-3">
         + Tambah
       </Button>
     </form>

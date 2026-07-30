@@ -7,6 +7,7 @@ import { Field } from "@/components/ui/field";
 import { updateBankAccount } from "@/server/tenant.functions";
 import { useTenant } from "@/lib/store";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 
 const BANK_OPTIONS = [
   { value: "bca", label: "BCA" },
@@ -38,7 +39,7 @@ export function BankAccountSection() {
       setTenant({ ...tenant!, bankCode, bankAccountNumber: accountNumber, bankAccountName: accountName } as any);
       toast.success("Informasi rekening disimpan");
     } catch (e: any) {
-      toast.error(e.message ?? "Gagal menyimpan rekening");
+      toast.error(getErrorMessage(e, "Gagal menyimpan rekening"));
     } finally {
       setSaving(false);
     }
@@ -91,6 +92,7 @@ export function BankAccountSection() {
 
       <Button
         onClick={handleSave}
+        loading={saving}
         disabled={!bankCode || !accountNumber || !accountName || saving}
       >
         {saving ? "Menyimpan..." : "Simpan Rekening"}

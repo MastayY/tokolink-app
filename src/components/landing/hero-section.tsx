@@ -93,7 +93,7 @@ export function HeroSection() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="mt-8 max-w-xl text-lg text-muted-foreground text-pretty"
         >
-          Satu halaman. Semua link, semua produk, satu tombol checkout langsung ke WhatsApp. Gratis
+          Satu halaman. Semua link, semua produk, satu tombol checkout langsung masuk ke order. Gratis
           & open-source untuk semua UMKM.
         </motion.p>
 

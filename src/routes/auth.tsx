@@ -1,11 +1,13 @@
+import { useState, useRef } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useAuthForm } from "@/hooks/use-auth-form";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { TokolinkLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getAppUrl } from "@/lib/utils";
+import { getAppHost, getAppUrl } from "@/lib/utils";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -44,7 +46,10 @@ function AuthPage() {
     verifyCode,
     resendCode,
     signInWithGoogle,
+    setTurnstileToken,
   } = useAuthForm();
+
+  const turnstileRef = useRef<any>(null);
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2 bg-background text-foreground">
@@ -64,7 +69,7 @@ function AuthPage() {
           </motion.h2>
           <p className="mt-6 text-sm text-background/60">— Manifesto Tokolink</p>
         </div>
-        <div className="text-xs text-background/40">MIT · Open Source · v1.0</div>
+        <div className="text-xs text-background/40">{getAppHost()}</div>
       </div>
 
       <div className="flex items-center justify-center p-8">
@@ -177,6 +182,20 @@ function AuthPage() {
                     placeholder="••••••••"
                   />
                 </div>
+
+                {(mode === "signup" || mode === "signin") && (
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY ?? ""}
+                    onSuccess={setTurnstileToken}
+                    onError={() => setTurnstileToken("")}
+                    onExpire={() => setTurnstileToken("")}
+                    options={{
+                      size: "invisible",
+                      action: mode === "signup" ? "signup" : "login",
+                    }}
+                  />
+                )}
 
                 <Button type="submit" disabled={loading} className="mt-8 w-full">
                   {loading ? "Memproses..." : mode === "signup" ? "Bikin akun" : "Masuk"} →

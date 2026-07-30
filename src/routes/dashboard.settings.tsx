@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useTenant } from "@/lib/store";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { PageHeader } from "@/components/layout/page-header";
 import { Field } from "@/components/ui/field";
@@ -22,6 +23,7 @@ function SettingsPage() {
   const [tagline, setTagline] = useState(tenant?.tagline ?? "");
   const [whatsapp, setWhatsapp] = useState(tenant?.whatsapp ?? "");
   const [avatar, setAvatar] = useState(tenant?.avatar ?? "");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (tenant) {
@@ -39,26 +41,30 @@ function SettingsPage() {
       <form
         onSubmit={async (e) => {
           e.preventDefault();
+          setSaving(true);
           try {
             await updateSettings({ name, tagline, whatsapp, avatar });
             toast.success("Pengaturan toko berhasil disimpan");
           } catch (err: any) {
-            toast.error(err.message || "Gagal menyimpan pengaturan");
+            toast.error(getErrorMessage(err, "Gagal menyimpan pengaturan"));
+          } finally {
+            setSaving(false);
           }
         }}
         className="space-y-6 border-b border-border pb-10"
       >
         <Field label="Nama toko">
-          <Input value={name} onChange={(e) => setName(e.target.value)} required />
+          <Input value={name} onChange={(e) => setName(e.target.value)} disabled={saving} required />
         </Field>
         <Field label="Tagline">
-          <Input value={tagline} onChange={(e) => setTagline(e.target.value)} />
+          <Input value={tagline} onChange={(e) => setTagline(e.target.value)} disabled={saving} />
         </Field>
         <Field label="Nomor WhatsApp (628...)">
           <Input
             value={whatsapp}
             onChange={(e) => setWhatsapp(e.target.value.replace(/\D/g, ""))}
             placeholder="6281234567890"
+            disabled={saving}
             required
           />
         </Field>
@@ -67,7 +73,9 @@ function SettingsPage() {
         </Field>
 
         <div className="flex items-center gap-3">
-          <Button type="submit">Simpan perubahan</Button>
+          <Button type="submit" loading={saving}>
+            {saving ? "Menyimpan..." : "Simpan perubahan"}
+          </Button>
         </div>
       </form>
 

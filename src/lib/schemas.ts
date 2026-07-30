@@ -16,7 +16,7 @@ export const createTenantSchema = z.object({
     .regex(/^62\d{9,15}$/, "Nomor WhatsApp harus diawali dengan 62 (contoh: 628123456789)")
     .or(z.literal(""))
     .default(""),
-  recaptchaToken: z.string().optional(),
+  turnstileToken: z.string().optional(),
 });
 
 export const updateTenantSchema = createTenantSchema.partial();
