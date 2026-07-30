@@ -24,11 +24,9 @@ export function TokolinkLogo({
         className="shrink-0"
       >
         {/* Horizontal bar: lime accent */}
-        <rect x="48" y="76" width="160" height="48" rx="24" fill="var(--lime)" />
+        <rect x="48" y="35" width="165" height="55" rx="24" fill="var(--lime)" />
         {/* Vertical bar: foreground (adapts dark/light) */}
-        <rect x="104" y="44" width="48" height="168" rx="24" fill="var(--foreground)" />
-        {/* Intersection dot: lime */}
-        <circle cx="128" cy="100" r="10" fill="var(--lime)" />
+        <rect x="104" y="65" width="55" height="140" rx="24" fill="var(--foreground)" />
       </svg>
       {showWordmark && (
         <span className="font-display font-semibold tracking-tight leading-none text-foreground text-lg">

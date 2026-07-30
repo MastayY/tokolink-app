@@ -62,7 +62,15 @@ export function isSafeImageUrl(url: string | null | undefined): boolean {
     const hostname = parsed.hostname;
 
     // Allow trusted CDNs and official site domains
-    if (hostname.endsWith(".public.blob.vercel-storage.com")) return true;
+    const r2PublicUrl = process.env.R2_PUBLIC_URL;
+    if (r2PublicUrl) {
+      try {
+        const r2Host = new URL(r2PublicUrl).hostname;
+        if (hostname === r2Host) return true;
+      } catch {
+        // invalid R2_PUBLIC_URL — skip
+      }
+    }
     if (hostname === "api.dicebear.com") return true;
     if (hostname === getAppHost()) return true;
 

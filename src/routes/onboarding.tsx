@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/store";
 import { useAuthGuard } from "@/hooks/use-auth-guard";
 import { createTenant } from "@/server/tenant.functions";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,11 @@ function Onboarding() {
   const [slug, setSlug] = useState("");
   const [name, setName] = useState("");
   const [tagline, setTagline] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const turnstileRef = useRef<any>(null);
   const navigate = useNavigate();
 
   // Guard: Redirect if already has a tenant
@@ -51,15 +55,12 @@ function Onboarding() {
     setError("");
 
     try {
-      const { getRecaptchaToken } = await import("@/lib/recaptcha");
-      const recaptchaToken = await getRecaptchaToken("onboarding");
-
       const tenant = await createTenant({
         data: {
           slug: cleanSlug,
           name,
           tagline,
-          recaptchaToken,
+          turnstileToken,
         },
       });
 
@@ -152,7 +153,19 @@ function Onboarding() {
             />
           </Field>
 
-          <Button type="submit" disabled={loading} className="inline-flex items-center gap-2">
+          <Turnstile
+            ref={turnstileRef}
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY ?? ""}
+            onSuccess={setTurnstileToken}
+            onError={() => setTurnstileToken("")}
+            onExpire={() => setTurnstileToken("")}
+            options={{
+              size: "invisible",
+              action: "onboarding",
+            }}
+          />
+
+          <Button type="submit" loading={loading} disabled={loading} className="inline-flex items-center gap-2">
             {loading ? "Membuat toko..." : "Lanjut ke dashboard →"}
           </Button>
         </form>

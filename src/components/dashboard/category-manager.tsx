@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmModal } from "@/components/dashboard/delete-confirm-modal";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 
 // ─── Inline Edit Row ─────────────────────────────────────────────────────────
 function EditRow({
@@ -28,7 +29,7 @@ function EditRow({
       await renameCategory(category.id, trimmed);
       toast.success("Kategori diperbarui");
     } catch (e: any) {
-      toast.error(e.message ?? "Gagal memperbarui kategori");
+      toast.error(getErrorMessage(e, "Gagal memperbarui kategori"));
     } finally {
       setSaving(false);
       onDone();
@@ -88,7 +89,7 @@ export function CategoryManager() {
       setNewName("");
       toast.success(`Kategori "${trimmed}" ditambahkan`);
     } catch (e: any) {
-      toast.error(e.message ?? "Gagal menambahkan kategori");
+      toast.error(getErrorMessage(e, "Gagal menambahkan kategori"));
     } finally {
       setAdding(false);
     }
@@ -101,7 +102,7 @@ export function CategoryManager() {
       toast.success(`Kategori "${cat.name}" dihapus`);
       setConfirmCategory(null);
     } catch (e: any) {
-      toast.error(e.message ?? "Gagal menghapus kategori");
+      toast.error(getErrorMessage(e, "Gagal menghapus kategori"));
     } finally {
       setDeletingId(null);
     }
@@ -191,6 +192,7 @@ export function CategoryManager() {
           />
           <Button
             onClick={handleAdd}
+            loading={adding}
             disabled={adding || !newName.trim()}
             className="h-9 px-3 shrink-0 gap-1.5"
           >

@@ -4,6 +4,7 @@ import { useTenant } from "@/lib/store";
 import type { Product } from "@/lib/types";
 import { AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { ProductForm } from "@/components/dashboard/product-form";
 import { ProductCard } from "@/components/dashboard/product-card";
@@ -23,6 +24,7 @@ function ProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!tenant) {
     return (
@@ -102,7 +104,7 @@ function ProductsPage() {
                 }
                 setShowForm(false);
               } catch (e: any) {
-                toast.error(e.message ?? "Gagal menyimpan produk");
+                toast.error(getErrorMessage(e, "Gagal menyimpan produk"));
               }
             }}
           />
@@ -113,14 +115,18 @@ function ProductsPage() {
         {deletingProduct && (
           <DeleteConfirmModal
             product={deletingProduct}
+            loading={isDeleting}
             onClose={() => setDeletingProduct(null)}
             onConfirm={async () => {
+              setIsDeleting(true);
               try {
                 await remove(deletingProduct.id);
                 toast.success(`Produk "${deletingProduct.name}" berhasil dihapus`);
                 setDeletingProduct(null);
               } catch (e: any) {
-                toast.error(e.message ?? "Gagal menghapus produk");
+                toast.error(getErrorMessage(e, "Gagal menghapus produk"));
+              } finally {
+                setIsDeleting(false);
               }
             }}
           />

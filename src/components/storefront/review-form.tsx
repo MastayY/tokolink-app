@@ -1,9 +1,9 @@
-// src/components/storefront/review-form.tsx
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 
 interface ReviewFormProps {
   orderId: string;
@@ -31,7 +31,7 @@ export function ReviewForm({ orderId, orderCode, buyerPhone, onSubmitted }: Revi
       toast.success("Ulasan terkirim. Terima kasih!");
       onSubmitted();
     } catch (e: any) {
-      toast.error(e.message ?? "Gagal mengirim ulasan");
+      toast.error(getErrorMessage(e, "Gagal mengirim ulasan"));
     } finally {
       setSubmitting(false);
     }
@@ -67,7 +67,7 @@ export function ReviewForm({ orderId, orderCode, buyerPhone, onSubmitted }: Revi
         rows={3}
       />
 
-      <Button type="submit" disabled={submitting} className="w-full">
+      <Button type="submit" loading={submitting} disabled={submitting} className="w-full">
         {submitting ? "Mengirim..." : "Kirim Ulasan"}
       </Button>
     </motion.form>

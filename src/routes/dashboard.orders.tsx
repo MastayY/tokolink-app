@@ -6,6 +6,7 @@ import { getMyOrders, markDigitalItemDelivered } from "@/server/order.functions"
 import { OrderTable } from "@/components/dashboard/order-table";
 import { OrderDetailDrawer } from "@/components/dashboard/order-detail-drawer";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 import type { Order, OrderItem, Product } from "@prisma/client";
 
 type OrderItemWithProduct = OrderItem & {
@@ -56,7 +57,7 @@ function OrdersDashboardPage() {
       setOrders(refreshed.orders as OrderWithItems[]);
       toast.success("Daftar pesanan diperbarui");
     } catch (e: any) {
-      toast.error(e.message ?? "Gagal memuat pesanan");
+      toast.error(getErrorMessage(e, "Gagal memuat pesanan"));
     } finally {
       setIsRefreshing(false);
     }
@@ -73,7 +74,7 @@ function OrdersDashboardPage() {
       const refreshed = await getMyOrders({ data: { page: 1 } });
       setOrders(refreshed.orders as OrderWithItems[]);
     } catch (e: any) {
-      toast.error(e.message ?? "Gagal membuat resi");
+      toast.error(getErrorMessage(e, "Gagal membuat resi"));
     } finally {
       setShippingOrders((prev) => { const next = new Set(prev); next.delete(orderId); return next; });
     }
@@ -90,7 +91,7 @@ function OrdersDashboardPage() {
         if (updated) setSelectedOrder(updated);
       }
     } catch (e: any) {
-      toast.error(e.message ?? "Gagal menandai item");
+      toast.error(getErrorMessage(e, "Gagal menandai item"));
     }
   }
 
