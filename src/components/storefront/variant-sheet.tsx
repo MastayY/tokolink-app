@@ -21,8 +21,10 @@ export function VariantSheet({ product, onClose }: VariantSheetProps) {
         if (g.options?.[0]) initial[g.id] = g.options[0];
       });
       return initial;
-    },
+    }
   );
+
+  const isOutOfStock = product.trackStock && (product.stock ?? 0) <= 0;
 
   const price =
     product.basePrice +
@@ -32,7 +34,7 @@ export function VariantSheet({ product, onClose }: VariantSheetProps) {
     product.variantGroups?.every((g) => selectedOptions[g.id] !== undefined) ?? true;
 
   const handleAdd = () => {
-    if (!allSelected) return;
+    if (!allSelected || isOutOfStock) return;
     const selectedArray = Object.values(selectedOptions);
     const optionIds = selectedArray.map((o) => o.id).join(",");
     const optionNames = selectedArray.map((o) => o.name).join(", ");
@@ -64,8 +66,28 @@ export function VariantSheet({ product, onClose }: VariantSheetProps) {
         <div className="flex-1">
           <div className="font-display text-lg font-medium">{product.name}</div>
           <div className="mt-1 text-sm text-muted-foreground">{formatIDR(price)}</div>
+
+          {/* Stock Display for Buyer */}
+          {product.trackStock && (
+            <div className="mt-1 text-xs font-semibold">
+              {isOutOfStock ? (
+                <span className="text-red-500">Stok Habis</span>
+              ) : (
+                <span
+                  className={
+                    (product.stock ?? 0) <= 5
+                      ? "text-amber-500"
+                      : "text-emerald-600 dark:text-emerald-400"
+                  }
+                >
+                  Sisa {product.stock} stok tersedia
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
       <div className="mt-4 overflow-y-auto pr-1 space-y-5 flex-1 min-h-0 hide-scrollbar">
         {product.variantGroups?.map((group) => (
           <div key={group.id} className="space-y-2">
@@ -98,8 +120,15 @@ export function VariantSheet({ product, onClose }: VariantSheetProps) {
           </div>
         ))}
       </div>
-      <Button onClick={handleAdd} disabled={!allSelected} className="mt-6 w-full shrink-0 py-3.5">
-        Tambah ke keranjang — {formatIDR(price)}
+
+      <Button
+        onClick={handleAdd}
+        disabled={!allSelected || isOutOfStock}
+        className="mt-6 w-full shrink-0 py-3.5"
+      >
+        {isOutOfStock
+          ? "Stok Habis"
+          : `Tambah ke keranjang — ${formatIDR(price)}`}
       </Button>
     </Sheet>
   );

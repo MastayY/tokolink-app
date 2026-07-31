@@ -67,11 +67,28 @@ export function ProductCard({ product, delay = 0, onSelect }: ProductCardProps) 
           </div>
         )}
       </div>
+
       <div className="p-3 flex-1 flex flex-col justify-between">
         <div>
           <div className="font-display text-sm font-medium leading-snug">{product.name}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{formatIDR(product.basePrice)}</div>
+          <div className="mt-1 flex items-baseline justify-between gap-1 text-xs">
+            <span className="text-muted-foreground font-medium">{formatIDR(product.basePrice)}</span>
+
+            {/* Buyer Stock Info Display */}
+            {product.trackStock && !isOutOfStock && (
+              <span
+                className={`text-[10px] font-semibold ${
+                  (product.stock ?? 0) <= 5
+                    ? "text-amber-500"
+                    : "text-emerald-600 dark:text-emerald-400"
+                }`}
+              >
+                Sisa {product.stock} stok
+              </span>
+            )}
+          </div>
         </div>
+
         <button
           onClick={isOutOfStock ? undefined : handleAdd}
           disabled={isOutOfStock}

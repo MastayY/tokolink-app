@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { TokolinkLogo } from "@/components/brand/logo";
+import { Spinner } from "@/components/ui/spinner";
 import {
   LayoutDashboard,
   Link2,
@@ -58,6 +60,7 @@ export function DashboardSidebar({
   signOut,
   navigate,
 }: DashboardSidebarProps) {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   // Poll for pending-action orders (PAID status) every 30s for the badge count
   const { data: pendingData } = useQuery({
     queryKey: ["pending-action-count"],
@@ -199,21 +202,31 @@ export function DashboardSidebar({
 
         {/* Logout */}
         <button
-          onClick={() => {
-            signOut().then(() => {
+          disabled={isLoggingOut}
+          onClick={async () => {
+            setIsLoggingOut(true);
+            try {
+              await signOut();
               navigate({ to: "/" });
-            });
+            } catch (err) {
+              console.error("Logout error:", err);
+              setIsLoggingOut(false);
+            }
           }}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition duration-200 w-full text-left cursor-pointer"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition duration-200 w-full text-left cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <LogOut className="h-5 w-5 shrink-0" />
+          {isLoggingOut ? (
+            <Spinner size="sm" />
+          ) : (
+            <LogOut className="h-5 w-5 shrink-0" />
+          )}
           {(!isCollapsed || isMobile) && (
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="whitespace-nowrap"
             >
-              Keluar
+              {isLoggingOut ? "Keluar..." : "Keluar"}
             </motion.span>
           )}
         </button>
