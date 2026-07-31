@@ -5,22 +5,27 @@ import { syncSession } from "../server/auth.functions";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 export function useSession() {
-  const { user, setUser, setLoading } = useAuth();
+  const { setUser, setLoading } = useAuth();
 
   useEffect(() => {
-    async function handleSession(session: Session | null) {
+    async function handleSession(session: Session | null, isBackground = false) {
       if (session) {
         // Set the session cookie for TanStack Start Server Functions
         // session.expires_in is in seconds, max-age expects seconds
         document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${session.expires_in}; SameSite=Lax; Secure`;
 
         try {
-          setLoading(true);
+          // Only show full-screen loading spinner on initial load when user is not loaded yet
+          if (!isBackground && !useAuth.getState().user) {
+            setLoading(true);
+          }
           const dbUser = await syncSession({});
           setUser(dbUser);
         } catch (err) {
           console.error("Failed to sync session with Prisma:", err);
-          setUser(null);
+          if (!useAuth.getState().user) {
+            setUser(null);
+          }
         } finally {
           setLoading(false);
         }
@@ -34,15 +39,21 @@ export function useSession() {
 
     // Get initial session
     supabase.auth.getSession().then(({ data }: any) => {
-      handleSession(data.session);
+      handleSession(data.session, false);
     });
 
     // Listen for auth state changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent, session: Session | null) => {
-        handleSession(session);
+      async (event: AuthChangeEvent, session: Session | null) => {
+        // Background token refresh (e.g. on window focus) — update cookie silently without unmounting UI
+        if (event === "TOKEN_REFRESHED" && session) {
+          document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${session.expires_in}; SameSite=Lax; Secure`;
+          return;
+        }
+        const isAlreadyLoggedIn = !!useAuth.getState().user;
+        handleSession(session, isAlreadyLoggedIn);
       },
     );
 
