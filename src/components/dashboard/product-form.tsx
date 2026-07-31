@@ -36,6 +36,7 @@ export function ProductForm({ initial, onClose, onSubmit, loading: externalLoadi
   const [digitalDeliveryText, setDigitalDeliveryText] = useState(initial?.digitalDeliveryText ?? "");
 
   const isFormLoading = submitting || externalLoading;
+  const hasVariants = variantGroups.length > 0;
 
   return (
     <div
@@ -80,7 +81,7 @@ export function ProductForm({ initial, onClose, onSubmit, loading: externalLoadi
                     image || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80",
                   isDigital,
                   trackStock,
-                  stock: trackStock ? (stock ?? null) : null,
+                  stock: trackStock && !hasVariants ? (stock ?? null) : null,
                   category: category.trim() || null,
                   digitalDeliveryType: isDigital ? digitalDeliveryType : null,
                   digitalDeliveryText:
@@ -236,7 +237,7 @@ export function ProductForm({ initial, onClose, onSubmit, loading: externalLoadi
                     <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform ${trackStock ? "translate-x-5" : "translate-x-0"}`} />
                   </button>
                 </div>
-                {trackStock && (
+                {trackStock && !hasVariants && (
                   <Field label="Jumlah stok">
                     <Input
                       type="number"
@@ -246,6 +247,11 @@ export function ProductForm({ initial, onClose, onSubmit, loading: externalLoadi
                       placeholder="0"
                     />
                   </Field>
+                )}
+                {trackStock && hasVariants && (
+                  <p className="text-xs text-muted-foreground px-1">
+                    Stok diatur per varian di bagian "Tipe Varian Produk" di bawah.
+                  </p>
                 )}
               </div>
             )}
@@ -262,12 +268,16 @@ export function ProductForm({ initial, onClose, onSubmit, loading: externalLoadi
                 </span>
                 <button
                   type="button"
-                  onClick={() =>
-                    setVariantGroups([
+                  onClick={() => {
+                    const newGroups = [
                       ...variantGroups,
                       { id: crypto.randomUUID(), name: "", options: [] },
-                    ])
-                  }
+                    ];
+                    setVariantGroups(newGroups);
+                    if (variantGroups.length === 0) {
+                      setStock(null);
+                    }
+                  }}
                   className="text-xs hover:opacity-90 bg-foreground text-background px-3 py-1.5 rounded-full font-medium transition cursor-pointer"
                 >
                   + Tipe Varian
@@ -304,9 +314,13 @@ export function ProductForm({ initial, onClose, onSubmit, loading: externalLoadi
                       </div>
                       <button
                         type="button"
-                        onClick={() =>
-                          setVariantGroups(variantGroups.filter((_, idx) => idx !== groupIdx))
-                        }
+                        onClick={() => {
+                          const newGroups = variantGroups.filter((_, idx) => idx !== groupIdx);
+                          setVariantGroups(newGroups);
+                          if (newGroups.length === 0) {
+                            setStock(null);
+                          }
+                        }}
                         className="text-xs text-muted-foreground hover:text-destructive border border-border bg-background hover:bg-destructive/10 px-3 py-2.5 rounded-xl transition cursor-pointer"
                       >
                         Hapus Grup
@@ -363,6 +377,23 @@ export function ProductForm({ initial, onClose, onSubmit, loading: externalLoadi
                             placeholder="Berat (g)"
                             className="w-24 shrink-0"
                           />
+                          {trackStock && (
+                            <Input
+                              type="number"
+                              min={0}
+                              value={option.stock ?? ""}
+                              onChange={(e) => {
+                                const copy = [...variantGroups];
+                                const opts = [...group.options];
+                                const val = e.target.value === "" ? null : Number(e.target.value);
+                                opts[optionIdx] = { ...option, stock: val };
+                                copy[groupIdx] = { ...group, options: opts };
+                                setVariantGroups(copy);
+                              }}
+                              placeholder="Stok"
+                              className="w-20 shrink-0"
+                            />
+                          )}
                           <button
                             type="button"
                             onClick={() => {
@@ -385,7 +416,7 @@ export function ProductForm({ initial, onClose, onSubmit, loading: externalLoadi
                         onClick={() => {
                           const copy = [...variantGroups];
                           const opts = [...(group.options || [])];
-                          opts.push({ id: crypto.randomUUID(), name: "", priceDelta: 0 });
+                          opts.push({ id: crypto.randomUUID(), name: "", priceDelta: 0, stock: null });
                           copy[groupIdx] = { ...group, options: opts };
                           setVariantGroups(copy);
                         }}

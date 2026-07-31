@@ -52,7 +52,9 @@ export const createProduct = createServerFn({ method: "POST" })
         tenantId,
         isDigital: data.isDigital ?? false,
         trackStock: data.trackStock ?? false,
-        stock: data.trackStock ? (data.stock ?? null) : null,
+        stock: data.trackStock && !(data.variantGroups && data.variantGroups.length > 0)
+          ? (data.stock ?? null)
+          : null,
         category: data.category?.trim() || null,
         digitalDeliveryType: data.isDigital ? (data.digitalDeliveryType ?? null) : null,
         digitalDeliveryText:
@@ -68,6 +70,7 @@ export const createProduct = createServerFn({ method: "POST" })
                 name: opt.name,
                 priceDelta: opt.priceDelta,
                 weightGrams: opt.weightGrams ?? null,
+                stock: opt.stock ?? null,
                 sortOrder: optIdx,
               })),
             },
@@ -129,7 +132,9 @@ export const updateProduct = createServerFn({ method: "POST" })
           image: data.image,
           isDigital: data.isDigital,
           trackStock: data.trackStock,
-          stock: data.trackStock === false ? null : data.stock,
+          stock: data.trackStock && !(data.variantGroups && data.variantGroups.length > 0)
+            ? (data.stock ?? null)
+            : null,
           category: data.category?.trim() ?? undefined,
           digitalDeliveryType: data.isDigital === false ? null : data.digitalDeliveryType,
           digitalDeliveryText:
@@ -146,6 +151,7 @@ export const updateProduct = createServerFn({ method: "POST" })
                       name: opt.name,
                       priceDelta: opt.priceDelta,
                       weightGrams: opt.weightGrams ?? null,
+                      stock: opt.stock ?? null,
                       sortOrder: optIdx,
                     })),
                   },

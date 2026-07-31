@@ -26,6 +26,7 @@ export const productVariantOptionSchema = z.object({
   name: z.string().min(1, "Nama opsi harus diisi").max(50),
   priceDelta: z.number().int().min(0, "Selisih harga tidak boleh negatif").default(0),
   weightGrams: z.number().int().min(1).optional().nullable(),
+  stock: z.number().int().min(0).nullable().optional(),
 });
 
 export const productVariantGroupSchema = z.object({

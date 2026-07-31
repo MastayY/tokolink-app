@@ -109,6 +109,7 @@ model ProductVariantOption {
   name        String
   priceDelta  Int    @default(0) @map("price_delta")
   weightGrams Int?   @map("weight_grams")
+  stock       Int?   @map("stock")
   sortOrder   Int    @default(0) @map("sort_order")
   groupId     String @map("group_id") @db.Uuid
 

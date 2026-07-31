@@ -18,13 +18,35 @@ export function VariantSheet({ product, onClose }: VariantSheetProps) {
     () => {
       const initial: Record<string, ProductVariantOption> = {};
       product.variantGroups?.forEach((g) => {
-        if (g.options?.[0]) initial[g.id] = g.options[0];
+        // Pick first available in-stock option if possible
+        const inStock = g.options?.find((o) => o.stock === null || o.stock > 0);
+        if (inStock) {
+          initial[g.id] = inStock;
+        } else if (g.options?.[0]) {
+          initial[g.id] = g.options[0];
+        }
       });
       return initial;
     }
   );
 
-  const isOutOfStock = product.trackStock && (product.stock ?? 0) <= 0;
+  const hasVariants = product.variantGroups && product.variantGroups.length > 0;
+
+  // Determine current stock from selected options or product level
+  const activeStock = product.trackStock
+    ? hasVariants
+      ? Object.values(selectedOptions).reduce<number | null>((min, opt) => {
+          if (opt.stock === null) return min;
+          return min === null ? opt.stock : Math.min(min, opt.stock);
+        }, null)
+      : product.stock
+    : null;
+
+  const isOutOfStock = product.trackStock && (
+    hasVariants
+      ? Object.values(selectedOptions).some((opt) => opt.stock !== null && opt.stock <= 0)
+      : (product.stock ?? 0) <= 0
+  );
 
   const price =
     product.basePrice +
@@ -36,21 +58,21 @@ export function VariantSheet({ product, onClose }: VariantSheetProps) {
   const handleAdd = () => {
     if (!allSelected || isOutOfStock) return;
     const selectedArray = Object.values(selectedOptions);
-    const optionIds = selectedArray.map((o) => o.id).join(",");
+    const optionIds = selectedArray.map((o) => o.id).filter(Boolean).join(",");
     const optionNames = selectedArray.map((o) => o.name).join(", ");
     add({
-      key: `${product.id}-${selectedArray.map((o) => o.id).join("-")}`,
+      key: `${product.id}-${selectedArray.map((o) => o.id || o.name).join("-")}`,
       productId: product.id,
       productName: product.name,
-      variantId: optionIds,
-      variantName: optionNames,
+      variantId: optionIds || undefined,
+      variantName: optionNames || undefined,
       unitPrice: price,
       qty: 1,
       image: product.image,
       isDigital: product.isDigital,
       weightGrams: product.weightGrams,
     });
-    toast.success(`"${product.name} (${optionNames})" ditambahkan ke keranjang`);
+    toast.success(`"${product.name}${optionNames ? ` (${optionNames})` : ""}" ditambahkan ke keranjang`);
     onClose();
   };
 
@@ -71,16 +93,18 @@ export function VariantSheet({ product, onClose }: VariantSheetProps) {
           {product.trackStock && (
             <div className="mt-1 text-xs font-semibold">
               {isOutOfStock ? (
-                <span className="text-red-500">Stok Habis</span>
+                <span className="text-red-500">Stok Varian Ini Habis</span>
+              ) : activeStock === null ? (
+                <span className="text-muted-foreground">Stok Tanpa Batas</span>
               ) : (
                 <span
                   className={
-                    (product.stock ?? 0) <= 5
+                    activeStock <= 5
                       ? "text-amber-500"
                       : "text-emerald-600 dark:text-emerald-400"
                   }
                 >
-                  Sisa {product.stock} stok tersedia
+                  Sisa {activeStock} stok tersedia
                 </span>
               )}
             </div>
@@ -96,21 +120,30 @@ export function VariantSheet({ product, onClose }: VariantSheetProps) {
             </div>
             <div className="flex flex-wrap gap-2">
               {group.options?.map((option) => {
-                const isSelected = selectedOptions[group.id]?.id === option.id;
+                const isSelected = selectedOptions[group.id]?.id === option.id || selectedOptions[group.id]?.name === option.name;
+                const variantOutOfStock = product.trackStock && option.stock !== null && option.stock <= 0;
                 return (
                   <button
-                    key={option.id}
-                    onClick={() => setSelectedOptions((prev) => ({ ...prev, [group.id]: option }))}
-                    className={`rounded-full border px-4 py-2 text-sm font-medium transition active:scale-[0.97] cursor-pointer ${
-                      isSelected
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border hover:border-foreground"
+                    key={option.id || option.name}
+                    onClick={() => !variantOutOfStock && setSelectedOptions((prev) => ({ ...prev, [group.id]: option }))}
+                    disabled={variantOutOfStock}
+                    className={`rounded-full border px-4 py-2 text-sm font-medium transition active:scale-[0.97] ${
+                      variantOutOfStock
+                        ? "border-border text-muted-foreground opacity-50 cursor-not-allowed line-through"
+                        : isSelected
+                        ? "border-foreground bg-foreground text-background cursor-pointer"
+                        : "border-border hover:border-foreground cursor-pointer"
                     }`}
                   >
                     {option.name}
                     {option.priceDelta > 0 && (
                       <span className="ml-1 text-xs opacity-75">
                         +{formatIDR(option.priceDelta)}
+                      </span>
+                    )}
+                    {product.trackStock && option.stock !== null && option.stock > 0 && option.stock <= 5 && (
+                      <span className="ml-1 text-[10px] text-amber-500 font-normal">
+                        ({option.stock} sisa)
                       </span>
                     )}
                   </button>
@@ -128,7 +161,7 @@ export function VariantSheet({ product, onClose }: VariantSheetProps) {
       >
         {isOutOfStock
           ? "Stok Habis"
-          : `Tambah ke keranjang — ${formatIDR(price)}`}
+          : `Tambah ke keranjang`}
       </Button>
     </Sheet>
   );
