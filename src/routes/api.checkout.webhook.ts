@@ -162,29 +162,39 @@ export const Route = createFileRoute("/api/checkout/webhook")({
               },
             });
 
-            // ── Stock: atomic conditional decrement ───────────────────────
+            // ── Stock: Safety validator only (Primary decrement done at checkout creation) ──
             const stockItems = itemsWithProduct.filter((i) => i.product?.trackStock && i.productId);
             if (stockItems.length > 0) {
-              const decrementResults = await Promise.all(
-                stockItems.map((item) =>
-                  prisma.product.updateMany({
-                    where: { id: item.productId!, stock: { gte: item.qty } },
-                    data: { stock: { decrement: item.qty } },
-                  }),
-                ),
-              );
-              const oversold = decrementResults.some((r) => r.count === 0);
-              if (oversold) {
-                console.error(
-                  `[webhook] OVERSELL DETECTED for order ${order.orderCode} — admin alert fired`,
-                  { orderId: order.id },
-                );
-                void alertAdminPayoutFailed({
-                  orderCode: order.orderCode,
-                  tenantId: order.tenantId,
-                  amount: order.subtotal,
-                  failureReason: `OVERSELL: stok habis saat atomic decrement pada order ${order.orderCode}. Cek manual dan refund jika perlu.`,
-                });
+              for (const item of stockItems) {
+                if (item.variantId) {
+                  const option = await prisma.productVariantOption.findUnique({
+                    where: { id: item.variantId },
+                    select: { stock: true },
+                  });
+                  if (option?.stock !== null && (option?.stock ?? 0) < 0) {
+                    console.error(`[webhook] Negative variant stock detected`, { orderId: order.id, variantId: item.variantId });
+                    void alertAdminPayoutFailed({
+                      orderCode: order.orderCode,
+                      tenantId: order.tenantId,
+                      amount: order.subtotal,
+                      failureReason: `OVERSELL: stok negatif pada variant ${item.variantId} — order ${order.orderCode}. Cek manual.`,
+                    });
+                  }
+                } else {
+                  const prod = await prisma.product.findUnique({
+                    where: { id: item.productId! },
+                    select: { stock: true },
+                  });
+                  if (prod?.stock !== null && (prod?.stock ?? 0) < 0) {
+                    console.error(`[webhook] Negative product stock detected`, { orderId: order.id, productId: item.productId });
+                    void alertAdminPayoutFailed({
+                      orderCode: order.orderCode,
+                      tenantId: order.tenantId,
+                      amount: order.subtotal,
+                      failureReason: `OVERSELL: stok negatif pada produk ${item.productId} — order ${order.orderCode}. Cek manual.`,
+                    });
+                  }
+                }
               }
             }
 

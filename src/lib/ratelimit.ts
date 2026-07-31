@@ -48,13 +48,38 @@ export const orderLookupLimiter = new Ratelimit({
   prefix: "rl:order-lookup",
 });
 
+export const confirmReceiptLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, "60 s"),
+  analytics: false,
+  prefix: "rl:confirm-receipt",
+});
+
+export const reviewLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(3, "60 s"),
+  analytics: false,
+  prefix: "rl:reviews",
+});
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Extract client IP from Vercel/Cloudflare headers. */
+/** Extract client IP safely from Cloudflare/Vercel trusted headers. */
 export function getClientIp(request: Request): string {
+  const cfIp = request.headers.get("cf-connecting-ip");
+  if (cfIp) return cfIp.trim();
+
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
+
   const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return request.headers.get("cf-connecting-ip") ?? "unknown";
+  if (forwarded) {
+    const parts = forwarded.split(",");
+    const lastTrusted = parts[parts.length - 1].trim();
+    if (lastTrusted) return lastTrusted;
+  }
+
+  return "unknown";
 }
 
 /**

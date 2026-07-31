@@ -12,6 +12,42 @@ function generateOrderCode(): string {
   return "TL-" + randomBytes(4).toString("hex").toUpperCase();
 }
 
+type StockReservation = { productId?: string; variantId?: string; qty: number; wasVariant: boolean };
+
+/** Sanitize error messages to prevent leaking internal UUIDs, DB errors, or technical details to users. */
+function sanitizeErrorMessage(rawMessage: string | undefined, fallback: string): string {
+  if (!rawMessage) return fallback;
+  if (
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(rawMessage) ||
+    /prisma|postgres|database|sql|invocation|uuid/i.test(rawMessage)
+  ) {
+    return fallback;
+  }
+  return rawMessage;
+}
+
+/** Release stock reservations made during pre-reservation on checkout failure. */
+async function releaseStockReservations(
+  reservations: StockReservation[],
+): Promise<void> {
+  await Promise.all(
+    reservations.map((r) => {
+      if (r.wasVariant && r.variantId) {
+        return prisma.productVariantOption.updateMany({
+          where: { id: r.variantId },
+          data: { stock: { increment: r.qty } },
+        });
+      } else if (r.productId) {
+        return prisma.product.updateMany({
+          where: { id: r.productId },
+          data: { stock: { increment: r.qty } },
+        });
+      }
+      return Promise.resolve();
+    }),
+  );
+}
+
 /** Resolve server-authoritative shipping cost from Upstash cache or Biteship fallback. */
 async function resolveShippingCost(params: {
   tenantId: string;
@@ -134,7 +170,15 @@ export const Route = createFileRoute("/api/checkout")({
             id: { in: productIds },
             tenantId,
           },
-          include: { variantGroups: { include: { options: true } } },
+          include: {
+            variantGroups: {
+              include: {
+                options: {
+                  select: { id: true, priceDelta: true, weightGrams: true, stock: true },
+                },
+              },
+            },
+          },
         });
 
         if (products.length !== productIds.length) {
@@ -152,31 +196,71 @@ export const Route = createFileRoute("/api/checkout")({
             let weightGrams = product.isDigital ? 0 : product.weightGrams;
 
             if (item.variantId) {
-              const option = product.variantGroups
-                .flatMap((g) => g.options)
-                .find((o) => o.id === item.variantId);
-              if (!option) {
-                throw new Error(`Variant ${item.variantId} tidak ditemukan untuk produk ${item.productId}`);
+              const selectedOptionIds = item.variantId.split(",").map((s) => s.trim()).filter(Boolean);
+              const allOptions = product.variantGroups.flatMap((g) => g.options);
+              const matchedOptions = allOptions.filter((o) => selectedOptionIds.includes(o.id));
+
+              if (matchedOptions.length === 0) {
+                throw new Error(`Varian "${item.variantName || item.name}" tidak ditemukan. Silakan perbarui keranjang Anda.`);
               }
-              unitPrice += option.priceDelta;
-              weightGrams = option.weightGrams ?? weightGrams;
+
+              for (const option of matchedOptions) {
+                unitPrice += option.priceDelta;
+                weightGrams = option.weightGrams ?? weightGrams;
+              }
             }
 
             return { ...item, price: unitPrice, weightGrams };
           });
         } catch (err: any) {
-          return Response.json({ error: err.message ?? "Data produk tidak valid" }, { status: 422 });
+          const safeMessage = sanitizeErrorMessage(err?.message, "Data produk tidak valid. Silakan perbarui keranjang Anda.");
+          return Response.json({ error: safeMessage }, { status: 422 });
         }
 
-        // ── Stock fast-fail (UX improvement — authoritative enforcement is in webhook) ─
+        // ── Stock: Atomic pre-reservation (variant-aware) ─────────────────────
+        const stockReservations: StockReservation[] = [];
+        const stockErrors: string[] = [];
+
         for (const item of verifiedItems) {
           const product = products.find((p) => p.id === item.productId)!;
-          if (product.trackStock && (product.stock ?? Infinity) < item.qty) {
-            return Response.json(
-              { error: `Stok "${product.name}" tidak mencukupi (tersisa ${product.stock ?? 0}).` },
-              { status: 409 },
-            );
+          if (!product.trackStock) continue;
+
+          if (item.variantId) {
+            const selectedOptionIds = item.variantId.split(",").map((s) => s.trim()).filter(Boolean);
+            const allOptions = product.variantGroups.flatMap((g) => g.options);
+            const matchedOptions = allOptions.filter((o) => selectedOptionIds.includes(o.id));
+
+            for (const option of matchedOptions) {
+              if (option.stock !== null) {
+                const result = await prisma.productVariantOption.updateMany({
+                  where: { id: option.id, stock: { gte: item.qty } },
+                  data: { stock: { decrement: item.qty } },
+                });
+                if (result.count === 0) {
+                  stockErrors.push(`Stok varian "${item.variantName ?? item.name}" tidak mencukupi.`);
+                } else {
+                  stockReservations.push({ variantId: option.id, qty: item.qty, wasVariant: true });
+                }
+              }
+            }
+          } else {
+            if (product.stock !== null) {
+              const result = await prisma.product.updateMany({
+                where: { id: item.productId, stock: { gte: item.qty } },
+                data: { stock: { decrement: item.qty } },
+              });
+              if (result.count === 0) {
+                stockErrors.push(`Stok "${product.name}" tidak mencukupi (tersisa ${product.stock ?? 0}).`);
+              } else {
+                stockReservations.push({ productId: item.productId, qty: item.qty, wasVariant: false });
+              }
+            }
           }
+        }
+
+        if (stockErrors.length > 0) {
+          await releaseStockReservations(stockReservations);
+          return Response.json({ error: stockErrors[0] }, { status: 409 });
         }
 
         // ── Digital-only detection ─────────────────────────────────────────────────────
@@ -223,8 +307,9 @@ export const Route = createFileRoute("/api/checkout")({
             serverShippingCost = resolved.cost;
             shippingCostUpdated = resolved.updatedFromServer;
           } catch (err: any) {
+            const safeMessage = sanitizeErrorMessage(err?.message, "Gagal memverifikasi tarif pengiriman. Silakan coba lagi.");
             return Response.json(
-              { error: err.message ?? "Gagal memverifikasi tarif pengiriman" },
+              { error: safeMessage },
               { status: 422 },
             );
           }
@@ -289,6 +374,7 @@ export const Route = createFileRoute("/api/checkout")({
           });
         } catch (err) {
           console.error("[api/checkout] DB write failed:", err);
+          await releaseStockReservations(stockReservations);
           return Response.json({ error: "Gagal membuat pesanan. Coba lagi." }, { status: 500 });
         }
 
@@ -307,6 +393,7 @@ export const Route = createFileRoute("/api/checkout")({
             where: { id: order.id },
             data: { status: "CANCELLED" },
           });
+          await releaseStockReservations(stockReservations);
           return Response.json(
             { error: "Gagal membuat sesi pembayaran. Coba lagi." },
             { status: 502 }
