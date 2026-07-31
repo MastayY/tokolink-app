@@ -4,23 +4,27 @@
   # Tokolink
   **Open Source Link-in-Bio & Micro-Catalogue Platform for Indonesian SMBs**
 
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](package.json)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=flat&logo=react)](https://react.dev/)
 [![TanStack Start](https://img.shields.io/badge/TanStack-Start-FF4154?style=flat)](https://tanstack.com/start)
 [![Supabase](https://img.shields.io/badge/Supabase-Auth-3ECF8E?style=flat&logo=supabase)](https://supabase.com/)
 [![Prisma ORM](https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat&logo=prisma)](https://www.prisma.io/)
+[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?style=flat&logo=githubsponsors)](https://github.com/sponsors/MastayY)
+[![Saweria](https://img.shields.io/badge/Saweria-Dukung%20di%20Saweria-FAAE2B?style=flat)](https://saweria.co/Saweria)
 
 </div>
 
 <br />
 
-**Tokolink** is a modern, high-performance open-source multi-tenant SaaS platform for small-to-medium businesses (SMBs) and creator-merchants. It combines a digital link-in-bio card with a full-featured storefront, integrated payment gateway, automated digital product delivery, and real-time shipping verification — all in one place.
+**Tokolink** is a modern, high-performance open-source multi-tenant SaaS platform for small-to-medium businesses (SMBs) and creator-merchants. It combines a digital link-in-bio card with a full-featured storefront, integrated payment gateway, automated digital product delivery, and real-time shipping verification all in one place.
 
 ---
 
 ## Table of Contents
 
+- [Latest Major Update Notice (v2.0.0)](#-latest-major-update-notice-v200)
 - [Key Features](#-key-features)
 - [Architecture & Technology Stack](#-architecture--technology-stack)
 - [System Requirements](#-system-requirements)
@@ -28,10 +32,24 @@
 - [Project Directory Structure](#-project-directory-structure)
 - [Security Hardening](#-security-hardening)
 - [Contributing](#-contributing)
+- [Sponsor & Support](#-sponsor--support)
 - [License](#-license)
 
 ---
 
+> ## 📢 Latest Major Update Notice (v2.0.0)
+> 
+> Tokolink **v2.0.0** is a **major milestone release (Generation 2)** transforming Tokolink from a basic link-in-bio micro-catalogue into a complete automated online store platform:
+> 
+> - **Integrated Payment Gateway & Automated Payouts:** Integrated Midtrans Snap payment processing with automated seller disbursements via Iris Facilitator.
+> - **Real-Time Logistics Courier Rates:** Server-authoritative Biteship API courier rate calculation and shipping validation with Redis caching.
+> - **Automated Digital Product Delivery:** Instant text (`AUTO_TEXT`) and manual key delivery upon payment verification via WhatsApp & order lookup pages.
+> - **Automated WhatsApp Notifications:** Fonnte API integration for instant order confirmation, courier tracking, and buyer/seller notifications.
+> - **Independent Per-Variant Stock Tracking:** Full per-variant option stock management (`ProductVariantOption.stock`) with **Mutual Exclusive Stock UI** logic.
+> - **Atomic Checkout Pre-Reservation & Race Condition Prevention:** Atomic database pre-reservation (`updateMany`) preventing oversell scenarios under high-concurrency checkouts.
+> - **Tab-Switching State Persistence & Quiet Token Refresh:** Seamless tab switching (e.g. WhatsApp Web to Dashboard) without losing active form inputs or triggering full-page loading unmounts.
+> - **Production Security Hardening:** Sliding-window rate limiting on `confirm-receipt` (5 req/min) and `reviews` (3 req/min), anti-IP-spoofing header resolution, and sanitized error messages to prevent internal UUID/database leakage.
+> 
 ## Key Features
 
 - **Instant Storefront & Onboarding:** Launch a full-featured, responsive merchant web app (`tokolink.app/store-slug`) in seconds via a streamlined onboarding flow.
@@ -171,6 +189,19 @@ Key points:
 - Follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages
 - Run `bun run build` to verify your changes before submitting
 - Check [SECURITY.md](SECURITY.md) for responsible vulnerability disclosure
+
+---
+
+## Sponsor & Support
+
+If you find **Tokolink** valuable or if it helps empower your business, please consider supporting the project!
+
+Your support directly covers infrastructure maintenance, domain costs, API integrations, and ongoing open-source feature development for Indonesian SMBs and creator-merchants.
+
+- 🪙 **Dukung via Saweria (Indonesia):** [saweria.co/Mastay](https://saweria.co/Mastay)
+- 💖 **Sponsor via GitHub Sponsors (Global):** [github.com/sponsors/MastayY](https://github.com/sponsors/MastayY)
+
+Every contribution, big or small, helps keep Tokolink independent, actively maintained, and free for everyone! 💖
 
 ---
 

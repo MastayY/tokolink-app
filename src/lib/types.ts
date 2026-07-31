@@ -13,9 +13,11 @@ export type Category = {
 };
 
 export type ProductVariantOption = {
-  id: string;
+  id?: string;
   name: string;
   priceDelta: number;
+  weightGrams?: number | null;
+  stock: number | null;
 };
 
 export type ProductVariantGroup = {

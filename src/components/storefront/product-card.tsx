@@ -14,7 +14,11 @@ interface ProductCardProps {
 export function ProductCard({ product, delay = 0, onSelect }: ProductCardProps) {
   const add = useCart((s) => s.add);
   const hasVariants = product.variantGroups && product.variantGroups.length > 0;
-  const isOutOfStock = product.trackStock && (product.stock ?? Infinity) <= 0;
+  const isOutOfStock = product.trackStock && (
+    hasVariants
+      ? product.variantGroups!.flatMap((g) => g.options ?? []).every((o) => o.stock !== null && o.stock <= 0)
+      : (product.stock ?? Infinity) <= 0
+  );
 
   const handleAdd = () => {
     if (isOutOfStock) return;
@@ -74,17 +78,22 @@ export function ProductCard({ product, delay = 0, onSelect }: ProductCardProps) 
           <div className="mt-1 flex items-baseline justify-between gap-1 text-xs">
             <span className="text-muted-foreground font-medium">{formatIDR(product.basePrice)}</span>
 
-            {/* Buyer Stock Info Display */}
-            {product.trackStock && !isOutOfStock && (
-              <span
-                className={`text-[10px] font-semibold ${
-                  (product.stock ?? 0) <= 5
-                    ? "text-amber-500"
-                    : "text-emerald-600 dark:text-emerald-400"
-                }`}
-              >
-                Sisa {product.stock} stok
+            {hasVariants ? (
+              <span className="text-[10px] text-muted-foreground font-medium">
+                Pilih varian
               </span>
+            ) : (
+              product.trackStock && !isOutOfStock && product.stock !== null && (
+                <span
+                  className={`text-[10px] font-semibold ${
+                    product.stock <= 5
+                      ? "text-amber-500"
+                      : "text-emerald-600 dark:text-emerald-400"
+                  }`}
+                >
+                  Sisa {product.stock} stok
+                </span>
+              )
             )}
           </div>
         </div>

@@ -39,33 +39,51 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
           <div className="mt-1 text-xs text-muted-foreground">{formatIDR(product.basePrice)}</div>
 
           {/* Stock Info Badge */}
-          <div className="mt-2.5 flex items-center gap-2">
-            {product.trackStock ? (
-              isOutOfStock ? (
-                <span className="rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 px-2.5 py-0.5 text-[10px] font-semibold">
-                  Stok Habis (0)
+          {product.trackStock ? (
+            product.variantGroups && product.variantGroups.length > 0 ? (
+              <div className="mt-2.5 space-y-1.5 border-t border-border pt-2.5">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                  Stok Per Varian
                 </span>
-              ) : (
-                <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-semibold">
-                  Sisa Stok: {product.stock}
-                </span>
-              )
+                {product.variantGroups.flatMap((g) => g.options).map((opt) => (
+                  <div key={opt.id} className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground truncate max-w-[120px]">{opt.name}</span>
+                    {opt.stock === null ? (
+                      <span className="text-[10px] text-muted-foreground">Tanpa Batas</span>
+                    ) : opt.stock <= 0 ? (
+                      <span className="rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 px-2 py-0.5 text-[10px] font-semibold">
+                        Habis
+                      </span>
+                    ) : opt.stock <= 5 ? (
+                      <span className="rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 text-[10px] font-semibold">
+                        Sisa {opt.stock}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold">
+                        Sisa {opt.stock}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             ) : (
+              <div className="mt-2.5 flex items-center gap-2">
+                {isOutOfStock ? (
+                  <span className="rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 px-2.5 py-0.5 text-[10px] font-semibold">
+                    Stok Habis (0)
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-semibold">
+                    Sisa Stok: {product.stock}
+                  </span>
+                )}
+              </div>
+            )
+          ) : (
+            <div className="mt-2.5 flex items-center gap-2">
               <span className="rounded-full bg-secondary text-muted-foreground border border-border px-2.5 py-0.5 text-[10px]">
                 Stok Tanpa Batas
               </span>
-            )}
-          </div>
-
-          {/* Variant groups display */}
-          {product.variantGroups && product.variantGroups.length > 0 && (
-            <div className="mt-3 space-y-1 border-t border-border pt-3">
-              {product.variantGroups.map((g) => (
-                <div key={g.id} className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground/70">{g.name}</span>:{" "}
-                  {g.options.map((o) => o.name).join(", ")}
-                </div>
-              ))}
             </div>
           )}
         </div>
